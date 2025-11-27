@@ -1,10 +1,33 @@
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Hotel, TicketCheck, Clock, CheckCircle, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
+  const { user, role, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    } else if (!loading && role && role !== "client") {
+      navigate("/");
+    }
+  }, [user, role, loading, navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  if (loading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">
+      <p className="text-muted-foreground">Chargement...</p>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -14,7 +37,7 @@ const ClientDashboard = () => {
             <Hotel className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold text-foreground">TicketHotel</span>
           </div>
-          <Button variant="outline">Déconnexion</Button>
+          <Button variant="outline" onClick={handleLogout}>Déconnexion</Button>
         </div>
       </nav>
 
