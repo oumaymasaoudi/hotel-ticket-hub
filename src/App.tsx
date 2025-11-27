@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import CreateTicket from "./pages/CreateTicket";
 import TrackTicket from "./pages/TrackTicket";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import ClientDashboard from "./pages/ClientDashboard";
 import TechnicianDashboard from "./pages/TechnicianDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/create-ticket" element={<CreateTicket />} />
           <Route path="/track-ticket" element={<TrackTicket />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/dashboard/client" element={<ClientDashboard />} />
           <Route path="/dashboard/technician" element={<TechnicianDashboard />} />
           <Route path="/dashboard/admin" element={<AdminDashboard />} />

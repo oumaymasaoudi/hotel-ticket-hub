@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,17 +6,82 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Hotel } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user, role, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // TODO: Implement authentication
-    // For now, simulate login and redirect based on role
-    navigate("/dashboard/client");
+  useEffect(() => {
+    if (!authLoading && user && role) {
+      redirectBasedOnRole(role);
+    }
+  }, [user, role, authLoading]);
+
+  const redirectBasedOnRole = (userRole: string) => {
+    switch (userRole) {
+      case "client":
+        navigate("/dashboard/client");
+        break;
+      case "technician":
+        navigate("/dashboard/technician");
+        break;
+      case "admin":
+        navigate("/dashboard/admin");
+        break;
+      case "superadmin":
+        navigate("/dashboard/superadmin");
+        break;
+      default:
+        navigate("/");
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Fetch user role
+        const { data: roleData, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .single();
+
+        if (roleError) throw roleError;
+
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue !",
+        });
+
+        redirectBasedOnRole(roleData.role);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erreur de connexion",
+        description: error.message || "Email ou mot de passe incorrect",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,12 +137,16 @@ const Login = () => {
             </Button>
           </div>
 
-          <Button onClick={handleLogin} className="w-full" disabled={!email || !password}>
-            Se connecter
+          <Button onClick={handleLogin} className="w-full" disabled={!email || !password || loading}>
+            {loading ? "Connexion..." : "Se connecter"}
           </Button>
 
-          <div className="text-center">
-            <Button variant="ghost" onClick={() => navigate("/")} className="text-sm">
+          <div className="text-center space-y-2">
+            <Button type="button" variant="ghost" onClick={() => navigate("/signup")} className="text-sm">
+              Créer un compte
+            </Button>
+            <br />
+            <Button type="button" variant="ghost" onClick={() => navigate("/")} className="text-sm">
               Retour à l'accueil
             </Button>
           </div>
