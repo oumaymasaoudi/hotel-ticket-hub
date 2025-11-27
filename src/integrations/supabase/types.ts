@@ -14,16 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          additional_cost: number | null
+          color: string
+          created_at: string | null
+          icon: string
+          id: string
+          is_mandatory: boolean | null
+          name: string
+        }
+        Insert: {
+          additional_cost?: number | null
+          color: string
+          created_at?: string | null
+          icon: string
+          id?: string
+          is_mandatory?: boolean | null
+          name: string
+        }
+        Update: {
+          additional_cost?: number | null
+          color?: string
+          created_at?: string | null
+          icon?: string
+          id?: string
+          is_mandatory?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      hotels: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          last_payment_date: string | null
+          name: string
+          next_payment_date: string | null
+          phone: string | null
+          plan_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_payment_date?: string | null
+          name: string
+          next_payment_date?: string | null
+          phone?: string | null
+          plan_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_payment_date?: string | null
+          name?: string
+          next_payment_date?: string | null
+          phone?: string | null
+          plan_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotels_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          base_cost: number
+          created_at: string | null
+          excess_ticket_cost: number
+          id: string
+          max_technicians: number
+          name: Database["public"]["Enums"]["subscription_plan"]
+          sla_hours: number
+          ticket_quota: number
+        }
+        Insert: {
+          base_cost: number
+          created_at?: string | null
+          excess_ticket_cost: number
+          id?: string
+          max_technicians: number
+          name: Database["public"]["Enums"]["subscription_plan"]
+          sla_hours: number
+          ticket_quota: number
+        }
+        Update: {
+          base_cost?: number
+          created_at?: string | null
+          excess_ticket_cost?: number
+          id?: string
+          max_technicians?: number
+          name?: Database["public"]["Enums"]["subscription_plan"]
+          sla_hours?: number
+          ticket_quota?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string
+          hotel_id: string | null
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          photo_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name: string
+          hotel_id?: string | null
+          id: string
+          is_active?: boolean | null
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string
+          hotel_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          assigned_technician_id: string | null
+          category_id: string
+          client_email: string
+          client_phone: string | null
+          created_at: string | null
+          description: string
+          hotel_id: string
+          id: string
+          is_urgent: boolean | null
+          resolved_at: string | null
+          sla_deadline: string | null
+          status: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_technician_id?: string | null
+          category_id: string
+          client_email: string
+          client_phone?: string | null
+          created_at?: string | null
+          description: string
+          hotel_id: string
+          id?: string
+          is_urgent?: boolean | null
+          resolved_at?: string | null
+          sla_deadline?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_technician_id?: string | null
+          category_id?: string
+          client_email?: string
+          client_phone?: string | null
+          created_at?: string | null
+          description?: string
+          hotel_id?: string
+          id?: string
+          is_urgent?: boolean | null
+          resolved_at?: string | null
+          sla_deadline?: string | null
+          status?: Database["public"]["Enums"]["ticket_status"] | null
+          ticket_number?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          hotel_id: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          hotel_id?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          hotel_id?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_hotel_id_fkey"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_ticket_number: { Args: never; Returns: string }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "client" | "technician" | "admin" | "superadmin"
+      subscription_plan: "starter" | "pro" | "enterprise"
+      ticket_status: "open" | "in_progress" | "pending" | "resolved" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +411,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["client", "technician", "admin", "superadmin"],
+      subscription_plan: ["starter", "pro", "enterprise"],
+      ticket_status: ["open", "in_progress", "pending", "resolved", "closed"],
+    },
   },
 } as const
