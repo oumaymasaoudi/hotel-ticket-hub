@@ -60,12 +60,14 @@ export const useAuth = (): UserWithRole => {
         .from("user_roles")
         .select("role, hotel_id")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
-      setRole(data.role as UserRole);
-      setHotelId(data.hotel_id);
+      if (data) {
+        setRole(data.role as UserRole);
+        setHotelId(data.hotel_id);
+      }
     } catch (error) {
       console.error("Error fetching user role:", error);
     } finally {
