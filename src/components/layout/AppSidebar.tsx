@@ -64,7 +64,7 @@ const adminMenuItems = [
   { title: "Tickets", url: "/dashboard/admin/tickets", icon: TicketCheck },
   { title: "Techniciens", url: "/dashboard/admin/technicians", icon: Users },
   { title: "Escalades", url: "/dashboard/admin/escalations", icon: AlertTriangle },
-  { title: "Paiements", url: "/dashboard/admin/payments", icon: CreditCard },
+  { title: "Paiement", url: "/dashboard/admin/payment", icon: CreditCard },
   { title: "Rapports", url: "/dashboard/admin/reports", icon: FileText },
   { title: "Paramètres", url: "/dashboard/admin/settings", icon: Settings },
 ];
