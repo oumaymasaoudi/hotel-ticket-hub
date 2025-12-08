@@ -232,27 +232,173 @@ const CreateTicketView = () => {
 // Technicians View
 const TechniciansView = () => {
   const { hotelId } = useAuth();
+  const { toast } = useToast();
   const [technicians, setTechnicians] = useState<any[]>([]);
-  useEffect(() => { 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    phone: "",
+  });
+
+  const fetchTechnicians = async () => {
     if (hotelId) {
-      // Techniciens de cet hôtel
-      supabase.from("user_roles").select(`*, profiles(full_name, phone)`).eq("role", "technician").eq("hotel_id", hotelId).then(({ data }) => setTechnicians(data || [])); 
+      const { data } = await supabase.from("user_roles").select(`*, profiles(full_name, phone)`).eq("role", "technician").eq("hotel_id", hotelId);
+      setTechnicians(data || []);
     }
+  };
+
+  useEffect(() => { 
+    fetchTechnicians();
   }, [hotelId]);
+
+  const handleCreateTechnician = async () => {
+    if (!formData.email || !formData.password || !formData.fullName) {
+      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Créer le compte utilisateur
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            phone: formData.phone,
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (authData.user) {
+        // Mettre à jour le profil avec hotel_id
+        await supabase.from("profiles").update({ hotel_id: hotelId }).eq("id", authData.user.id);
+
+        // Créer le rôle technicien
+        const { error: roleError } = await supabase.from("user_roles").insert({
+          user_id: authData.user.id,
+          role: "technician",
+          hotel_id: hotelId,
+        });
+
+        if (roleError) throw roleError;
+
+        toast({ title: "Technicien créé", description: `${formData.fullName} a été ajouté avec succès` });
+        setShowAddModal(false);
+        setFormData({ email: "", password: "", fullName: "", phone: "" });
+        fetchTechnicians();
+      }
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message || "Une erreur s'est produite", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end"><Button><Plus className="h-4 w-4 mr-2" />Ajouter technicien</Button></div>
+      <div className="flex justify-end">
+        <Button onClick={() => setShowAddModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />Ajouter technicien
+        </Button>
+      </div>
       <Card>
         <Table>
-          <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Téléphone</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nom</TableHead>
+              <TableHead>Téléphone</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {technicians.map((t) => (
-              <TableRow key={t.id}><TableCell>{t.profiles?.full_name}</TableCell><TableCell>{t.profiles?.phone || "N/A"}</TableCell><TableCell><Badge>Actif</Badge></TableCell><TableCell><div className="flex gap-2"><Button variant="outline" size="icon"><Edit className="h-4 w-4" /></Button><Button variant="outline" size="icon"><Trash2 className="h-4 w-4" /></Button></div></TableCell></TableRow>
-            ))}
+            {technicians.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  Aucun technicien trouvé
+                </TableCell>
+              </TableRow>
+            ) : (
+              technicians.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{t.profiles?.full_name || "N/A"}</TableCell>
+                  <TableCell>{t.profiles?.phone || "N/A"}</TableCell>
+                  <TableCell><Badge className="bg-green-500/10 text-green-500">Actif</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="icon"><Edit className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>
+
+      {/* Modal création technicien */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajouter un technicien</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="tech-name">Nom complet *</Label>
+              <Input
+                id="tech-name"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                placeholder="Jean Dupont"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tech-email">Email *</Label>
+              <Input
+                id="tech-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="technicien@hotel.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tech-phone">Téléphone</Label>
+              <Input
+                id="tech-phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+33 6 12 34 56 78"
+              />
+            </div>
+            <div>
+              <Label htmlFor="tech-password">Mot de passe *</Label>
+              <Input
+                id="tech-password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>Annuler</Button>
+            <Button onClick={handleCreateTechnician} disabled={loading}>
+              {loading ? "Création..." : "Créer le technicien"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
