@@ -1034,12 +1034,8 @@ const PaymentsView = () => (
 );
 
 // Reports View
-const ReportsView = () => (
-  <div className="grid md:grid-cols-2 gap-6">
-    <Card className="p-6"><h3 className="font-bold mb-4">Rapport mensuel</h3><p className="text-muted-foreground mb-4">Statistiques des tickets</p><Button>Télécharger PDF</Button></Card>
-    <Card className="p-6"><h3 className="font-bold mb-4">Rapport techniciens</h3><p className="text-muted-foreground mb-4">Performance des interventions</p><Button>Télécharger PDF</Button></Card>
-  </div>
-);
+import AdminReportsView from '@/components/reports/AdminReportsView';
+const ReportsView = () => <AdminReportsView />;
 
 // Settings View
 const SettingsView = () => (
