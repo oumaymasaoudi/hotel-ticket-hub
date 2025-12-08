@@ -102,7 +102,8 @@ const Signup = () => {
       return;
     }
 
-    if ((formData.role === "admin" || formData.role === "technician") && !formData.hotelId) {
+    // Seul admin doit sélectionner un hôtel - les techniciens sont assignés dynamiquement
+    if (formData.role === "admin" && !formData.hotelId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un hôtel",
@@ -262,7 +263,8 @@ const Signup = () => {
             </Select>
           </div>
 
-          {(formData.role === "admin" || formData.role === "technician") && (
+          {/* Seul admin sélectionne un hôtel - les techniciens sont assignés dynamiquement */}
+          {formData.role === "admin" && (
             <div>
               <Label htmlFor="hotel">Hôtel</Label>
               <Select value={formData.hotelId} onValueChange={(value) => setFormData({ ...formData, hotelId: value })}>
