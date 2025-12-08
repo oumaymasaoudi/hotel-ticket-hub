@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoryCard } from "@/components/CategoryCard";
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { TicketImageUpload } from "@/components/tickets/TicketImageUpload";
 import { ArrowLeft, ArrowRight, Check, Copy, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,6 +40,7 @@ const CreateTicket = () => {
   const [hotelId, setHotelId] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [description, setDescription] = useState("");
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [createdTicket, setCreatedTicket] = useState<{ number: string; category: string } | null>(null);
   
@@ -68,13 +70,35 @@ const CreateTicket = () => {
     if (step > 1) setStep(step - 1);
   };
 
+  const uploadImages = async (ticketId: string) => {
+    for (const file of pendingImages) {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${ticketId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("ticket-images")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        continue;
+      }
+
+      await supabase.from("ticket_images").insert({
+        ticket_id: ticketId,
+        storage_path: fileName,
+        file_name: file.name,
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
       // Generate ticket number
       const { data: ticketNumber } = await supabase.rpc("generate_ticket_number");
 
-      const { error } = await supabase.from("tickets").insert({
+      const { data: ticketData, error } = await supabase.from("tickets").insert({
         ticket_number: ticketNumber,
         client_email: email,
         client_phone: phone || null,
@@ -82,9 +106,14 @@ const CreateTicket = () => {
         category_id: selectedCategoryId,
         description,
         status: "open",
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Upload images if any
+      if (pendingImages.length > 0 && ticketData) {
+        await uploadImages(ticketData.id);
+      }
 
       const category = categories.find(c => c.id === selectedCategoryId);
       setCreatedTicket({
@@ -258,7 +287,7 @@ const CreateTicket = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-bold mb-2 text-card-foreground">Détails du problème</h2>
-                <p className="text-muted-foreground">Décrivez le problème rencontré</p>
+                <p className="text-muted-foreground">Décrivez le problème rencontré et ajoutez des photos si nécessaire</p>
               </div>
               <div className="space-y-4">
                 <div>
@@ -268,9 +297,10 @@ const CreateTicket = () => {
                     placeholder="Décrivez votre problème en détail..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={6}
+                    rows={5}
                   />
                 </div>
+                <TicketImageUpload onImagesChange={setPendingImages} />
               </div>
               <div className="flex justify-between">
                 <Button variant="outline" onClick={handleBack}>

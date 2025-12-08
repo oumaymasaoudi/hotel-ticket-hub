@@ -274,6 +274,38 @@ export type Database = {
           },
         ]
       }
+      ticket_images: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          storage_path: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          storage_path: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          storage_path?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_images_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           assigned_technician_id: string | null
