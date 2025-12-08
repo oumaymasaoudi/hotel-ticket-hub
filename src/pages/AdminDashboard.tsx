@@ -234,6 +234,7 @@ const TechniciansView = () => {
   const { hotelId } = useAuth();
   const { toast } = useToast();
   const [technicians, setTechnicians] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -242,17 +243,49 @@ const TechniciansView = () => {
     fullName: "",
     phone: "",
   });
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const fetchTechnicians = async () => {
     if (hotelId) {
-      const { data } = await supabase.from("user_roles").select(`*, profiles(full_name, phone)`).eq("role", "technician").eq("hotel_id", hotelId);
-      setTechnicians(data || []);
+      const { data } = await supabase
+        .from("user_roles")
+        .select(`*, profiles(full_name, phone)`)
+        .eq("role", "technician")
+        .eq("hotel_id", hotelId);
+      
+      // Récupérer les catégories de chaque technicien
+      if (data) {
+        const techsWithCategories = await Promise.all(
+          data.map(async (tech) => {
+            const { data: techCats } = await supabase
+              .from("technician_categories")
+              .select(`category_id, categories(name, color)`)
+              .eq("technician_id", tech.user_id);
+            return { ...tech, categories: techCats || [] };
+          })
+        );
+        setTechnicians(techsWithCategories);
+      }
     }
+  };
+
+  const fetchCategories = async () => {
+    const { data } = await supabase.from("categories").select("*");
+    setCategories(data || []);
   };
 
   useEffect(() => { 
     fetchTechnicians();
+    fetchCategories();
   }, [hotelId]);
+
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleCreateTechnician = async () => {
     if (!formData.email || !formData.password || !formData.fullName) {
@@ -260,9 +293,13 @@ const TechniciansView = () => {
       return;
     }
 
+    if (selectedCategories.length === 0) {
+      toast({ title: "Erreur", description: "Veuillez sélectionner au moins une spécialité", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Créer le compte utilisateur
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -277,10 +314,8 @@ const TechniciansView = () => {
       if (signUpError) throw signUpError;
 
       if (authData.user) {
-        // Mettre à jour le profil avec hotel_id
         await supabase.from("profiles").update({ hotel_id: hotelId }).eq("id", authData.user.id);
 
-        // Créer le rôle technicien
         const { error: roleError } = await supabase.from("user_roles").insert({
           user_id: authData.user.id,
           role: "technician",
@@ -289,9 +324,18 @@ const TechniciansView = () => {
 
         if (roleError) throw roleError;
 
+        // Insérer les catégories du technicien
+        const categoryInserts = selectedCategories.map(categoryId => ({
+          technician_id: authData.user!.id,
+          category_id: categoryId,
+        }));
+
+        await supabase.from("technician_categories").insert(categoryInserts);
+
         toast({ title: "Technicien créé", description: `${formData.fullName} a été ajouté avec succès` });
         setShowAddModal(false);
         setFormData({ email: "", password: "", fullName: "", phone: "" });
+        setSelectedCategories([]);
         fetchTechnicians();
       }
     } catch (error: any) {
@@ -314,6 +358,7 @@ const TechniciansView = () => {
             <TableRow>
               <TableHead>Nom</TableHead>
               <TableHead>Téléphone</TableHead>
+              <TableHead>Spécialités</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -321,7 +366,7 @@ const TechniciansView = () => {
           <TableBody>
             {technicians.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   Aucun technicien trouvé
                 </TableCell>
               </TableRow>
@@ -330,6 +375,23 @@ const TechniciansView = () => {
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.profiles?.full_name || "N/A"}</TableCell>
                   <TableCell>{t.profiles?.phone || "N/A"}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {t.categories?.length > 0 ? (
+                        t.categories.map((cat: any) => (
+                          <Badge 
+                            key={cat.category_id} 
+                            variant="outline"
+                            style={{ borderColor: cat.categories?.color, color: cat.categories?.color }}
+                          >
+                            {cat.categories?.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Aucune</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell><Badge className="bg-green-500/10 text-green-500">Actif</Badge></TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -346,7 +408,7 @@ const TechniciansView = () => {
 
       {/* Modal création technicien */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ajouter un technicien</DialogTitle>
           </DialogHeader>
@@ -389,6 +451,34 @@ const TechniciansView = () => {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 placeholder="••••••••"
               />
+            </div>
+            <div>
+              <Label>Spécialités *</Label>
+              <p className="text-sm text-muted-foreground mb-2">Sélectionnez les domaines d'intervention</p>
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded-md">
+                {categories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    onClick={() => toggleCategory(cat.id)}
+                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${
+                      selectedCategories.includes(cat.id)
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:bg-accent"
+                    }`}
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    <span className="text-sm">{cat.name}</span>
+                  </div>
+                ))}
+              </div>
+              {selectedCategories.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  {selectedCategories.length} spécialité(s) sélectionnée(s)
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
