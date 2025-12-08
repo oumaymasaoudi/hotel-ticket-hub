@@ -1,151 +1,149 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Luxury Hotel Theme - Petrol Blue & Gold
+   A majestic design system for 5-star hotels
+   All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 209 40% 96%;
-    --foreground: 222 47% 11%;
+    /* Petrol Blue Luxury Palette */
+    --background: 200 25% 95%;
+    --foreground: 200 40% 12%;
 
-    --card: 210 40% 98%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 40% 12%;
 
-    --popover: 214 31% 91%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 40% 12%;
 
-    --primary: 200 98% 39%;
-    --primary-foreground: 204 100% 97%;
+    /* Deep Petrol Blue Primary */
+    --primary: 195 70% 22%;
+    --primary-foreground: 45 50% 95%;
 
-    --secondary: 215 24% 26%;
-    --secondary-foreground: 210 40% 98%;
+    /* Rich Gold Secondary */
+    --secondary: 42 75% 50%;
+    --secondary-foreground: 200 40% 12%;
 
-    --muted: 215 20% 65%;
-    --muted-foreground: 222 47% 11%;
+    --muted: 200 15% 75%;
+    --muted-foreground: 200 25% 40%;
 
-    --accent: 210 40% 98%;
-    --accent-foreground: 215 19% 34%;
+    --accent: 195 30% 90%;
+    --accent-foreground: 195 70% 22%;
 
-    --destructive: 0 72% 50%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 212 26% 83%;
-    --input: 212 26% 83%;
-    --ring: 200 98% 39%;
+    --border: 200 20% 85%;
+    --input: 200 20% 85%;
+    --ring: 42 75% 50%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Sidebar - Dark Petrol */
+    --sidebar-background: 195 70% 15%;
+    --sidebar-foreground: 45 30% 95%;
+    --sidebar-primary: 42 75% 50%;
+    --sidebar-primary-foreground: 200 40% 12%;
+    --sidebar-accent: 195 50% 25%;
+    --sidebar-accent-foreground: 45 30% 95%;
+    --sidebar-border: 195 50% 25%;
+    --sidebar-ring: 42 75% 50%;
+    --sidebar: 195 70% 15%;
 
-    --sidebar-foreground: 222 47% 11%;
+    /* Charts - Luxury Palette */
+    --chart-1: 195 70% 30%;
+    --chart-2: 42 75% 50%;
+    --chart-3: 195 40% 50%;
+    --chart-4: 42 60% 40%;
+    --chart-5: 195 30% 70%;
 
-    --sidebar-primary: 200 98% 39%;
+    /* Typography */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'Playfair Display', 'Cormorant Garamond', ui-serif, Georgia, serif;
+    --font-mono: 'Space Mono', ui-monospace, monospace;
 
-    --sidebar-primary-foreground: 204 100% 97%;
+    /* Luxury Shadows with warm tint */
+    --shadow-2xs: 0 1px 3px 0px hsl(200 30% 20% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(200 30% 20% / 0.08);
+    --shadow-sm: 0 2px 6px 0px hsl(200 30% 20% / 0.1), 0 1px 2px -1px hsl(200 30% 20% / 0.1);
+    --shadow: 0 4px 12px 0px hsl(200 30% 20% / 0.12), 0 2px 4px -1px hsl(200 30% 20% / 0.1);
+    --shadow-md: 0 6px 16px 0px hsl(200 30% 20% / 0.12), 0 4px 6px -1px hsl(200 30% 20% / 0.1);
+    --shadow-lg: 0 10px 25px 0px hsl(200 30% 20% / 0.15), 0 6px 10px -1px hsl(200 30% 20% / 0.1);
+    --shadow-xl: 0 20px 40px 0px hsl(200 30% 20% / 0.18), 0 10px 15px -1px hsl(200 30% 20% / 0.1);
+    --shadow-2xl: 0 25px 50px 0px hsl(200 30% 20% / 0.25);
 
-    --sidebar-accent: 215 24% 26%;
-
-    --sidebar-accent-foreground: 210 40% 98%;
-
-    --sidebar-border: 212 26% 83%;
-
-    --sidebar-ring: 200 98% 39%;
-
-    --chart-1: 198 93% 59%;
-
-    --chart-2: 213 93% 67%;
-
-    --chart-3: 215 20% 65%;
-
-    --chart-4: 215 16% 46%;
-
-    --chart-5: 215 19% 34%;
-
-    --sidebar: 210 40% 98%;
-
-    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-
-    --font-serif: 'Lora', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-
-    --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    /* Gold glow for luxury elements */
+    --shadow-gold: 0 0 30px hsl(42 75% 50% / 0.3);
 
     --tracking-normal: 0em;
-
     --spacing: 0.25rem;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    /* Dark Petrol Blue Theme */
+    --background: 200 40% 8%;
+    --foreground: 45 20% 95%;
 
-    --card: 217 32% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 195 40% 12%;
+    --card-foreground: 45 20% 95%;
 
-    --popover: 215 24% 26%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 195 45% 14%;
+    --popover-foreground: 45 20% 95%;
 
-    --primary: 198 93% 59%;
-    --primary-foreground: 204 80% 15%;
+    /* Deep Petrol Blue Primary */
+    --primary: 42 75% 55%;
+    --primary-foreground: 200 40% 8%;
 
-    --secondary: 212 26% 83%;
-    --secondary-foreground: 228 84% 4%;
+    /* Gold Secondary */
+    --secondary: 195 50% 30%;
+    --secondary-foreground: 45 20% 95%;
 
-    --muted: 215 16% 46%;
-    --muted-foreground: 210 40% 98%;
+    --muted: 195 30% 25%;
+    --muted-foreground: 200 15% 65%;
 
-    --accent: 228 84% 4%;
-    --accent-foreground: 215 20% 65%;
+    --accent: 195 45% 18%;
+    --accent-foreground: 42 75% 55%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 85% 97%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 215 19% 34%;
-    --input: 215 19% 34%;
-    --ring: 198 93% 59%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 198 93% 59%;
-    --sidebar-primary-foreground: 204 80% 15%;
-    --sidebar-accent: 215 20% 65%;
-    --sidebar-accent-foreground: 228 84% 4%;
-    --sidebar-border: 215 19% 34%;
-    --sidebar-ring: 198 93% 59%;
-    --chart-1: 199 95% 73%;
-    --chart-2: 211 96% 78%;
-    --chart-3: 215 20% 65%;
-    --chart-4: 215 16% 46%;
-    --chart-5: 215 19% 34%;
-    --sidebar: 217 32% 17%;
-    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
-    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
-    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
-    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
-    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
-    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+    --border: 195 35% 22%;
+    --input: 195 35% 22%;
+    --ring: 42 75% 55%;
+
+    /* Sidebar - Darker Petrol */
+    --sidebar-background: 200 50% 6%;
+    --sidebar-foreground: 45 20% 90%;
+    --sidebar-primary: 42 75% 55%;
+    --sidebar-primary-foreground: 200 40% 8%;
+    --sidebar-accent: 195 40% 15%;
+    --sidebar-accent-foreground: 45 20% 90%;
+    --sidebar-border: 195 35% 18%;
+    --sidebar-ring: 42 75% 55%;
+    --sidebar: 200 50% 6%;
+
+    /* Charts */
+    --chart-1: 42 75% 55%;
+    --chart-2: 195 50% 45%;
+    --chart-3: 42 60% 45%;
+    --chart-4: 195 40% 35%;
+    --chart-5: 195 30% 50%;
+
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
+    --shadow-sm: 0 2px 6px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow: 0 4px 12px 0px hsl(0 0% 0% / 0.25), 0 2px 4px -1px hsl(0 0% 0% / 0.15);
+    --shadow-md: 0 6px 16px 0px hsl(0 0% 0% / 0.25), 0 4px 6px -1px hsl(0 0% 0% / 0.15);
+    --shadow-lg: 0 10px 25px 0px hsl(0 0% 0% / 0.3), 0 6px 10px -1px hsl(0 0% 0% / 0.15);
+    --shadow-xl: 0 20px 40px 0px hsl(0 0% 0% / 0.35), 0 10px 15px -1px hsl(0 0% 0% / 0.2);
+    --shadow-2xl: 0 25px 50px 0px hsl(0 0% 0% / 0.45);
+    --shadow-gold: 0 0 40px hsl(42 75% 50% / 0.25);
   }
 }
 
@@ -155,6 +153,70 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight;
+  }
+}
+
+@layer components {
+  /* Luxury glass effect */
+  .glass-luxury {
+    @apply backdrop-blur-xl bg-card/80 border border-border/50;
+  }
+
+  /* Gold accent border */
+  .border-gold {
+    border-color: hsl(42 75% 50%);
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-luxury {
+    background: linear-gradient(135deg, hsl(195 70% 15%) 0%, hsl(200 50% 8%) 100%);
+  }
+
+  .bg-gradient-gold {
+    background: linear-gradient(135deg, hsl(42 75% 55%) 0%, hsl(38 70% 45%) 100%);
+  }
+
+  /* Text gradient */
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(42 75% 60%) 0%, hsl(38 80% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Luxury card hover effect */
+  .card-luxury {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-luxury:hover {
+    @apply shadow-xl -translate-y-1;
+  }
+
+  /* Gold underline animation */
+  .underline-gold {
+    @apply relative;
+  }
+
+  .underline-gold::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300;
+    background: linear-gradient(90deg, hsl(42 75% 55%) 0%, hsl(38 70% 45%) 100%);
+  }
+
+  .underline-gold:hover::after {
+    @apply w-full;
+  }
+}
+
+@layer utilities {
+  /* Luxury shadow utilities */
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
   }
 }
