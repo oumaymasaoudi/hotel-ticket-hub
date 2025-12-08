@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CreditCard, Check, ArrowLeft, Loader2, Crown, Star, Zap } from "lucide-react";
+import { CreditCard, Check, Loader2, Crown, Star, Zap, Settings, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 // Stripe price IDs
 const PLANS = {
@@ -53,10 +56,33 @@ const PLANS = {
 
 const AdminPayment = () => {
   const [loading, setLoading] = useState<string | null>(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [subscription, setSubscription] = useState<{
+    subscribed: boolean;
+    price_id?: string;
+    subscription_end?: string;
+  } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const paymentStatus = searchParams.get("payment");
+
+  useEffect(() => {
+    checkSubscription();
+  }, []);
+
+  const checkSubscription = async () => {
+    setCheckingSubscription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("check-subscription");
+      if (error) throw error;
+      setSubscription(data);
+    } catch (error) {
+      console.error("Error checking subscription:", error);
+    } finally {
+      setCheckingSubscription(false);
+    }
+  };
 
   const handleSubscribe = async (planKey: string) => {
     const plan = PLANS[planKey as keyof typeof PLANS];
@@ -86,6 +112,34 @@ const AdminPayment = () => {
     }
   };
 
+  const handleManageSubscription = async () => {
+    setLoading("manage");
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      if (error) throw error;
+
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (error: any) {
+      console.error("Portal error:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'accéder au portail de gestion",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const getCurrentPlanKey = () => {
+    if (!subscription?.price_id) return null;
+    return Object.entries(PLANS).find(([, plan]) => plan.priceId === subscription.price_id)?.[0];
+  };
+
+  const currentPlanKey = getCurrentPlanKey();
+
   return (
     <DashboardLayout allowedRoles={["admin"]} title="Paiement Abonnement" showBackButton>
       <div className="space-y-8">
@@ -95,9 +149,49 @@ const AdminPayment = () => {
           </div>
         )}
 
+        {/* Statut de l'abonnement actuel */}
+        {!checkingSubscription && subscription?.subscribed && (
+          <Card className="border-secondary bg-secondary/5">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Votre abonnement actuel</CardTitle>
+                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                  Actif
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Plan:</span>
+                <span className="font-semibold">
+                  {currentPlanKey ? PLANS[currentPlanKey as keyof typeof PLANS].name : "Inconnu"}
+                </span>
+              </div>
+              {subscription.subscription_end && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Prochaine facturation:</span>
+                  <span className="font-semibold">
+                    {format(new Date(subscription.subscription_end), "dd MMMM yyyy", { locale: fr })}
+                  </span>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={loading === "manage"}>
+                  {loading === "manage" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Settings className="h-4 w-4 mr-2" />}
+                  Gérer l'abonnement
+                </Button>
+                <Button variant="ghost" size="sm" onClick={checkSubscription}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Actualiser
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-serif font-bold text-foreground">
-            Choisissez votre plan
+            {subscription?.subscribed ? "Changer de plan" : "Choisissez votre plan"}
           </h2>
           <p className="text-muted-foreground">
             Sélectionnez l'abonnement adapté aux besoins de votre hôtel
@@ -108,13 +202,21 @@ const AdminPayment = () => {
           {Object.entries(PLANS).map(([key, plan]) => {
             const Icon = plan.icon;
             const isPopular = "popular" in plan && plan.popular;
+            const isCurrentPlan = currentPlanKey === key;
             
             return (
               <Card 
                 key={key} 
-                className={`relative card-luxury ${isPopular ? "border-secondary shadow-gold" : ""}`}
+                className={`relative card-luxury ${isPopular ? "border-secondary shadow-gold" : ""} ${isCurrentPlan ? "ring-2 ring-green-500" : ""}`}
               >
-                {isPopular && (
+                {isCurrentPlan && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                      Votre plan
+                    </span>
+                  </div>
+                )}
+                {isPopular && !isCurrentPlan && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-3 py-1 rounded-full">
                       Populaire
@@ -145,14 +247,19 @@ const AdminPayment = () => {
                 <CardFooter>
                   <Button 
                     className="w-full" 
-                    variant={isPopular ? "default" : "outline"}
-                    onClick={() => handleSubscribe(key)}
+                    variant={isCurrentPlan ? "secondary" : isPopular ? "default" : "outline"}
+                    onClick={() => isCurrentPlan ? handleManageSubscription() : handleSubscribe(key)}
                     disabled={loading !== null}
                   >
-                    {loading === key ? (
+                    {loading === key || (loading === "manage" && isCurrentPlan) ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Chargement...
+                      </>
+                    ) : isCurrentPlan ? (
+                      <>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Gérer
                       </>
                     ) : (
                       <>
