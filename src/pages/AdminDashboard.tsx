@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
 
 const AdminDashboard = () => {
   const location = useLocation();
@@ -132,6 +133,8 @@ const TicketsView = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTechId, setSelectedTechId] = useState("");
   const [showOnlySpecialists, setShowOnlySpecialists] = useState(true);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailTicket, setDetailTicket] = useState<any>(null);
 
   useEffect(() => { if (hotelId) fetchData(); }, [hotelId]);
 
@@ -170,8 +173,34 @@ const TicketsView = () => {
 
   const handleAssign = async () => {
     if (!selectedTicket || !selectedTechId) return;
+    
+    // Récupérer le nom du technicien
+    const selectedTech = technicians.find(t => t.user_id === selectedTechId);
+    const techName = selectedTech?.profiles?.full_name || "Technicien";
+    
     const { error } = await supabase.from("tickets").update({ assigned_technician_id: selectedTechId, status: "in_progress" }).eq("id", selectedTicket.id);
     if (error) { toast({ title: "Erreur", variant: "destructive" }); return; }
+    
+    // Enregistrer dans l'historique
+    await supabase.from("ticket_history").insert({
+      ticket_id: selectedTicket.id,
+      action_type: "technician_assigned",
+      old_value: selectedTicket.profiles?.full_name || null,
+      new_value: techName,
+      performed_by: null // sera remplacé par l'ID de l'admin actuel si disponible
+    });
+    
+    // Si changement de statut, l'enregistrer aussi
+    if (selectedTicket.status !== "in_progress") {
+      await supabase.from("ticket_history").insert({
+        ticket_id: selectedTicket.id,
+        action_type: "status_change",
+        old_value: selectedTicket.status,
+        new_value: "in_progress",
+        performed_by: null
+      });
+    }
+    
     toast({ title: "Technicien assigné" });
     setShowAssignModal(false);
     setSelectedTechId("");
@@ -214,7 +243,12 @@ const TicketsView = () => {
                 <TableCell>{getStatusBadge(t.status)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedTicket(t); setSelectedTechId(""); setShowAssignModal(true); }}><UserPlus className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => { setDetailTicket(t); setShowDetailModal(true); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedTicket(t); setSelectedTechId(""); setShowAssignModal(true); }}>
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -275,6 +309,13 @@ const TicketsView = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal détail du ticket */}
+      <TicketDetailDialog 
+        ticket={detailTicket} 
+        open={showDetailModal} 
+        onOpenChange={setShowDetailModal} 
+      />
     </div>
   );
 };
