@@ -125,7 +125,7 @@ const DashboardView = () => {
 
 // Tickets View
 const TicketsView = () => {
-  const { hotelId } = useAuth();
+  const { hotelId, user } = useAuth();
   const { toast } = useToast();
   const [tickets, setTickets] = useState<any[]>([]);
   const [technicians, setTechnicians] = useState<any[]>([]);
@@ -135,16 +135,41 @@ const TicketsView = () => {
   const [showOnlySpecialists, setShowOnlySpecialists] = useState(true);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailTicket, setDetailTicket] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => { if (hotelId) fetchData(); }, [hotelId]);
 
   const fetchData = async () => {
-    // Tickets avec profil du technicien assigné via jointure
-    const { data: t } = await supabase
+    // Tickets de l'hôtel avec catégorie
+    const { data: ticketsData, error: ticketsError } = await supabase
       .from("tickets")
-      .select(`*, categories(id, name), profiles!tickets_assigned_technician_id_fkey(full_name)`)
+      .select(`*, categories(id, name, color)`)
       .eq("hotel_id", hotelId)
       .order("created_at", { ascending: false });
+    
+    if (ticketsError) {
+      console.error("Error fetching tickets:", ticketsError);
+      return;
+    }
+
+    // Récupérer les noms des techniciens assignés
+    if (ticketsData) {
+      const ticketsWithTechNames = await Promise.all(
+        ticketsData.map(async (ticket) => {
+          if (ticket.assigned_technician_id) {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", ticket.assigned_technician_id)
+              .single();
+            return { ...ticket, technician_name: profileData?.full_name || null };
+          }
+          return { ...ticket, technician_name: null };
+        })
+      );
+      setTickets(ticketsWithTechNames);
+    }
     
     // Tous les techniciens avec leurs spécialités
     const { data: techData } = await supabase
@@ -158,17 +183,19 @@ const TicketsView = () => {
         techData.map(async (tech) => {
           const { data: techCats } = await supabase
             .from("technician_categories")
-            .select("category_id")
+            .select("category_id, categories(name, color)")
             .eq("technician_id", tech.user_id);
-          return { ...tech, categoryIds: techCats?.map(c => c.category_id) || [] };
+          return { 
+            ...tech, 
+            categoryIds: techCats?.map(c => c.category_id) || [],
+            categories: techCats || []
+          };
         })
       );
       setTechnicians(techsWithCategories);
     } else {
       setTechnicians([]);
     }
-    
-    setTickets(t || []);
   };
 
   const handleAssign = async () => {
@@ -178,16 +205,23 @@ const TicketsView = () => {
     const selectedTech = technicians.find(t => t.user_id === selectedTechId);
     const techName = selectedTech?.profiles?.full_name || "Technicien";
     
-    const { error } = await supabase.from("tickets").update({ assigned_technician_id: selectedTechId, status: "in_progress" }).eq("id", selectedTicket.id);
-    if (error) { toast({ title: "Erreur", variant: "destructive" }); return; }
+    const { error } = await supabase
+      .from("tickets")
+      .update({ assigned_technician_id: selectedTechId, status: "in_progress" })
+      .eq("id", selectedTicket.id);
+    
+    if (error) { 
+      toast({ title: "Erreur", description: error.message, variant: "destructive" }); 
+      return; 
+    }
     
     // Enregistrer dans l'historique
     await supabase.from("ticket_history").insert({
       ticket_id: selectedTicket.id,
       action_type: "technician_assigned",
-      old_value: selectedTicket.profiles?.full_name || null,
+      old_value: selectedTicket.technician_name || null,
       new_value: techName,
-      performed_by: null // sera remplacé par l'ID de l'admin actuel si disponible
+      performed_by: user?.id || null
     });
     
     // Si changement de statut, l'enregistrer aussi
@@ -197,11 +231,11 @@ const TicketsView = () => {
         action_type: "status_change",
         old_value: selectedTicket.status,
         new_value: "in_progress",
-        performed_by: null
+        performed_by: user?.id || null
       });
     }
     
-    toast({ title: "Technicien assigné" });
+    toast({ title: "Technicien assigné avec succès" });
     setShowAssignModal(false);
     setSelectedTechId("");
     fetchData();
@@ -209,9 +243,16 @@ const TicketsView = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "resolved": return <Badge className="bg-green-500/10 text-green-500">Résolu</Badge>;
-      case "in_progress": return <Badge className="bg-yellow-500/10 text-yellow-500">En cours</Badge>;
-      default: return <Badge className="bg-primary/10 text-primary">Ouvert</Badge>;
+      case "resolved": 
+        return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Résolu</Badge>;
+      case "closed": 
+        return <Badge className="bg-muted text-muted-foreground">Fermé</Badge>;
+      case "in_progress": 
+        return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">En cours</Badge>;
+      case "pending": 
+        return <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">En attente</Badge>;
+      default: 
+        return <Badge className="bg-primary/20 text-primary border-primary/30">Ouvert</Badge>;
     }
   };
 
@@ -227,75 +268,177 @@ const TicketsView = () => {
     ? technicians.filter(t => t.categoryIds.includes(selectedTicket.category_id)).length 
     : 0;
 
+  // Filtrer les tickets par recherche et statut
+  const filteredTickets = tickets.filter(t => {
+    const matchesSearch = searchQuery === "" || 
+      t.ticket_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.client_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.categories?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between"><Input placeholder="Rechercher..." className="w-64" /></div>
-      <Card>
+      <div className="flex flex-col md:flex-row gap-4 justify-between">
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Rechercher par numéro, email, catégorie..." 
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full md:w-48">
+            <SelectValue placeholder="Filtrer par statut" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value="open">Ouvert</SelectItem>
+            <SelectItem value="in_progress">En cours</SelectItem>
+            <SelectItem value="pending">En attente</SelectItem>
+            <SelectItem value="resolved">Résolu</SelectItem>
+            <SelectItem value="closed">Fermé</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card className="overflow-hidden">
         <Table>
-          <TableHeader><TableRow><TableHead>Numéro</TableHead><TableHead>Catégorie</TableHead><TableHead>Client</TableHead><TableHead>Technicien</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-semibold">Numéro</TableHead>
+              <TableHead className="font-semibold">Catégorie</TableHead>
+              <TableHead className="font-semibold">Client</TableHead>
+              <TableHead className="font-semibold">Technicien</TableHead>
+              <TableHead className="font-semibold">Statut</TableHead>
+              <TableHead className="font-semibold text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
-            {tickets.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="font-medium">{t.ticket_number}</TableCell>
-                <TableCell>{t.categories?.name}</TableCell>
-                <TableCell>{t.client_email}</TableCell>
-                <TableCell>{t.profiles?.full_name || <span className="text-muted-foreground">Non assigné</span>}</TableCell>
-                <TableCell>{getStatusBadge(t.status)}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setDetailTicket(t); setShowDetailModal(true); }}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedTicket(t); setSelectedTechId(""); setShowAssignModal(true); }}>
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {filteredTickets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Aucun ticket trouvé
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredTickets.map((t) => (
+                <TableRow key={t.id} className="hover:bg-muted/30">
+                  <TableCell className="font-medium font-mono">{t.ticket_number}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant="outline" 
+                      style={{ 
+                        borderColor: t.categories?.color, 
+                        color: t.categories?.color,
+                        backgroundColor: `${t.categories?.color}15`
+                      }}
+                    >
+                      {t.categories?.name}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{t.client_email}</TableCell>
+                  <TableCell>
+                    {t.technician_name ? (
+                      <span className="font-medium">{t.technician_name}</span>
+                    ) : (
+                      <span className="text-muted-foreground italic">Non assigné</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(t.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2 justify-end">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => { setDetailTicket(t); setShowDetailModal(true); }}
+                        title="Voir les détails"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => { setSelectedTicket(t); setSelectedTechId(""); setShowOnlySpecialists(true); setShowAssignModal(true); }}
+                        title="Assigner un technicien"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>
 
+      {/* Modal d'assignation */}
       <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Assigner un technicien</DialogTitle>
+            <DialogTitle className="font-serif">Assigner un technicien</DialogTitle>
             {selectedTicket && (
-              <p className="text-sm text-muted-foreground">
-                Ticket {selectedTicket.ticket_number} - {selectedTicket.categories?.name}
-              </p>
+              <div className="pt-2 space-y-1">
+                <p className="text-sm text-muted-foreground">
+                  Ticket <span className="font-mono font-medium">{selectedTicket.ticket_number}</span>
+                </p>
+                <Badge 
+                  variant="outline" 
+                  style={{ 
+                    borderColor: selectedTicket.categories?.color, 
+                    color: selectedTicket.categories?.color 
+                  }}
+                >
+                  {selectedTicket.categories?.name}
+                </Badge>
+              </div>
             )}
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Spécialistes uniquement</Label>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{specialistsCount} spécialiste{specialistsCount > 1 ? 's' : ''}</Badge>
-                <Button 
-                  variant={showOnlySpecialists ? "default" : "outline"} 
-                  size="sm"
-                  onClick={() => setShowOnlySpecialists(!showOnlySpecialists)}
-                >
-                  {showOnlySpecialists ? "Filtré" : "Tous"}
-                </Button>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div>
+                <Label className="text-sm font-medium">Filtrer par spécialité</Label>
+                <p className="text-xs text-muted-foreground">
+                  {specialistsCount} technicien{specialistsCount !== 1 ? 's' : ''} spécialisé{specialistsCount !== 1 ? 's' : ''}
+                </p>
               </div>
+              <Button 
+                variant={showOnlySpecialists ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setShowOnlySpecialists(!showOnlySpecialists)}
+              >
+                {showOnlySpecialists ? "Spécialistes" : "Tous"}
+              </Button>
             </div>
-            <div>
-              <Label>Technicien</Label>
+            <div className="space-y-2">
+              <Label>Sélectionner un technicien</Label>
               <Select value={selectedTechId} onValueChange={setSelectedTechId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner..." />
+                  <SelectValue placeholder="Choisir un technicien..." />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredTechnicians.length === 0 ? (
-                    <div className="p-2 text-sm text-muted-foreground text-center">
-                      Aucun spécialiste disponible
+                    <div className="p-3 text-sm text-muted-foreground text-center">
+                      {showOnlySpecialists 
+                        ? "Aucun spécialiste pour cette catégorie"
+                        : "Aucun technicien disponible"
+                      }
                     </div>
                   ) : (
                     filteredTechnicians.map((t) => (
                       <SelectItem key={t.user_id} value={t.user_id}>
-                        {t.profiles?.full_name}
+                        <div className="flex items-center gap-2">
+                          <span>{t.profiles?.full_name}</span>
+                          {t.categoryIds.includes(selectedTicket?.category_id) && (
+                            <Badge variant="secondary" className="text-xs">Spécialiste</Badge>
+                          )}
+                        </div>
                       </SelectItem>
                     ))
                   )}
@@ -305,7 +448,10 @@ const TicketsView = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAssignModal(false)}>Annuler</Button>
-            <Button onClick={handleAssign} disabled={!selectedTechId}>Assigner</Button>
+            <Button onClick={handleAssign} disabled={!selectedTechId}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Assigner
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
