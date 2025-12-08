@@ -67,22 +67,16 @@ const DashboardView = () => {
   const fetchData = async () => {
     const { data: ticketsData } = await supabase.from("tickets").select(`*, categories (name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false }).limit(5);
     
-    // Techniciens de cet hôtel - requêtes séparées car pas de FK directe
-    const { data: rolesData } = await supabase.from("user_roles").select("user_id").eq("role", "technician").eq("hotel_id", hotelId);
-    
-    let techData: any[] = [];
-    if (rolesData && rolesData.length > 0) {
-      const userIds = rolesData.map(r => r.user_id);
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
-      techData = rolesData.map(role => ({
-        ...role,
-        profiles: profiles?.find(p => p.id === role.user_id)
-      }));
-    }
+    // Techniciens de cet hôtel - jointure directe grâce à la FK
+    const { data: techData } = await supabase
+      .from("user_roles")
+      .select("user_id, profiles(id, full_name)")
+      .eq("role", "technician")
+      .eq("hotel_id", hotelId);
     
     setTickets(ticketsData || []);
-    setTechnicians(techData);
-    setStats({ open: ticketsData?.filter(t => t.status !== "resolved" && t.status !== "closed").length || 0, escalated: 0, technicians: techData.length });
+    setTechnicians(techData || []);
+    setStats({ open: ticketsData?.filter(t => t.status !== "resolved" && t.status !== "closed").length || 0, escalated: 0, technicians: techData?.length || 0 });
   };
 
   const getStatusBadge = (status: string) => {
@@ -142,38 +136,22 @@ const TicketsView = () => {
   useEffect(() => { if (hotelId) fetchData(); }, [hotelId]);
 
   const fetchData = async () => {
-    const { data: t } = await supabase.from("tickets").select(`*, categories(name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false });
+    // Tickets avec profil du technicien assigné via jointure
+    const { data: t } = await supabase
+      .from("tickets")
+      .select(`*, categories(name), profiles!tickets_assigned_technician_id_fkey(full_name)`)
+      .eq("hotel_id", hotelId)
+      .order("created_at", { ascending: false });
     
-    // Techniciens de cet hôtel - requêtes séparées
-    const { data: rolesData } = await supabase.from("user_roles").select("user_id").eq("role", "technician").eq("hotel_id", hotelId);
+    // Techniciens de cet hôtel - jointure directe
+    const { data: techData } = await supabase
+      .from("user_roles")
+      .select("user_id, profiles(id, full_name, phone)")
+      .eq("role", "technician")
+      .eq("hotel_id", hotelId);
     
-    let techData: any[] = [];
-    if (rolesData && rolesData.length > 0) {
-      const userIds = rolesData.map(r => r.user_id);
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name, phone").in("id", userIds);
-      techData = rolesData.map(role => ({
-        user_id: role.user_id,
-        profiles: profiles?.find(p => p.id === role.user_id)
-      }));
-    }
-    
-    // Récupérer les noms des techniciens assignés aux tickets
-    let ticketsWithProfiles = t || [];
-    if (t && t.length > 0) {
-      const assignedIds = t.filter(ticket => ticket.assigned_technician_id).map(ticket => ticket.assigned_technician_id);
-      if (assignedIds.length > 0) {
-        const { data: assignedProfiles } = await supabase.from("profiles").select("id, full_name").in("id", assignedIds);
-        ticketsWithProfiles = t.map(ticket => ({
-          ...ticket,
-          assigned_profile: ticket.assigned_technician_id 
-            ? assignedProfiles?.find(p => p.id === ticket.assigned_technician_id) 
-            : null
-        }));
-      }
-    }
-    
-    setTickets(ticketsWithProfiles);
-    setTechnicians(techData);
+    setTickets(t || []);
+    setTechnicians(techData || []);
   };
 
   const handleAssign = async () => {
@@ -205,7 +183,7 @@ const TicketsView = () => {
                 <TableCell className="font-medium">{t.ticket_number}</TableCell>
                 <TableCell>{t.categories?.name}</TableCell>
                 <TableCell>{t.client_email}</TableCell>
-                <TableCell>{(t as any).assigned_profile?.full_name || <span className="text-muted-foreground">Non assigné</span>}</TableCell>
+                <TableCell>{t.profiles?.full_name || <span className="text-muted-foreground">Non assigné</span>}</TableCell>
                 <TableCell>{getStatusBadge(t.status)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
@@ -247,38 +225,26 @@ const TechniciansView = () => {
 
   const fetchTechnicians = async () => {
     if (hotelId) {
-      // Récupérer les rôles techniciens de cet hôtel
+      // Jointure directe user_roles -> profiles + catégories
       const { data: rolesData } = await supabase
         .from("user_roles")
-        .select("*")
+        .select("*, profiles(full_name, phone)")
         .eq("role", "technician")
         .eq("hotel_id", hotelId);
       
       if (rolesData && rolesData.length > 0) {
-        // Récupérer les profils et catégories pour chaque technicien
-        const techsWithDetails = await Promise.all(
+        // Récupérer les catégories pour chaque technicien
+        const techsWithCategories = await Promise.all(
           rolesData.map(async (role) => {
-            // Récupérer le profil
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("full_name, phone")
-              .eq("id", role.user_id)
-              .maybeSingle();
-            
-            // Récupérer les catégories
             const { data: techCats } = await supabase
               .from("technician_categories")
               .select(`category_id, categories(name, color)`)
               .eq("technician_id", role.user_id);
             
-            return { 
-              ...role, 
-              profiles: profileData,
-              categories: techCats || [] 
-            };
+            return { ...role, categories: techCats || [] };
           })
         );
-        setTechnicians(techsWithDetails);
+        setTechnicians(techsWithCategories);
       } else {
         setTechnicians([]);
       }
