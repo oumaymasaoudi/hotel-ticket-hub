@@ -66,11 +66,23 @@ const DashboardView = () => {
 
   const fetchData = async () => {
     const { data: ticketsData } = await supabase.from("tickets").select(`*, categories (name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false }).limit(5);
-    // Techniciens de cet hôtel
-    const { data: techData } = await supabase.from("user_roles").select(`user_id, profiles (full_name, phone)`).eq("role", "technician").eq("hotel_id", hotelId);
+    
+    // Techniciens de cet hôtel - requêtes séparées car pas de FK directe
+    const { data: rolesData } = await supabase.from("user_roles").select("user_id").eq("role", "technician").eq("hotel_id", hotelId);
+    
+    let techData: any[] = [];
+    if (rolesData && rolesData.length > 0) {
+      const userIds = rolesData.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+      techData = rolesData.map(role => ({
+        ...role,
+        profiles: profiles?.find(p => p.id === role.user_id)
+      }));
+    }
+    
     setTickets(ticketsData || []);
-    setTechnicians(techData || []);
-    setStats({ open: ticketsData?.filter(t => t.status !== "resolved" && t.status !== "closed").length || 0, escalated: 0, technicians: techData?.length || 0 });
+    setTechnicians(techData);
+    setStats({ open: ticketsData?.filter(t => t.status !== "resolved" && t.status !== "closed").length || 0, escalated: 0, technicians: techData.length });
   };
 
   const getStatusBadge = (status: string) => {
@@ -130,11 +142,38 @@ const TicketsView = () => {
   useEffect(() => { if (hotelId) fetchData(); }, [hotelId]);
 
   const fetchData = async () => {
-    const { data: t } = await supabase.from("tickets").select(`*, categories(name), profiles!tickets_assigned_technician_id_fkey(full_name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false });
-    // Techniciens de cet hôtel
-    const { data: tech } = await supabase.from("user_roles").select(`user_id, profiles(full_name, phone)`).eq("role", "technician").eq("hotel_id", hotelId);
-    setTickets(t || []);
-    setTechnicians(tech || []);
+    const { data: t } = await supabase.from("tickets").select(`*, categories(name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false });
+    
+    // Techniciens de cet hôtel - requêtes séparées
+    const { data: rolesData } = await supabase.from("user_roles").select("user_id").eq("role", "technician").eq("hotel_id", hotelId);
+    
+    let techData: any[] = [];
+    if (rolesData && rolesData.length > 0) {
+      const userIds = rolesData.map(r => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, phone").in("id", userIds);
+      techData = rolesData.map(role => ({
+        user_id: role.user_id,
+        profiles: profiles?.find(p => p.id === role.user_id)
+      }));
+    }
+    
+    // Récupérer les noms des techniciens assignés aux tickets
+    let ticketsWithProfiles = t || [];
+    if (t && t.length > 0) {
+      const assignedIds = t.filter(ticket => ticket.assigned_technician_id).map(ticket => ticket.assigned_technician_id);
+      if (assignedIds.length > 0) {
+        const { data: assignedProfiles } = await supabase.from("profiles").select("id, full_name").in("id", assignedIds);
+        ticketsWithProfiles = t.map(ticket => ({
+          ...ticket,
+          assigned_profile: ticket.assigned_technician_id 
+            ? assignedProfiles?.find(p => p.id === ticket.assigned_technician_id) 
+            : null
+        }));
+      }
+    }
+    
+    setTickets(ticketsWithProfiles);
+    setTechnicians(techData);
   };
 
   const handleAssign = async () => {
@@ -166,7 +205,7 @@ const TicketsView = () => {
                 <TableCell className="font-medium">{t.ticket_number}</TableCell>
                 <TableCell>{t.categories?.name}</TableCell>
                 <TableCell>{t.client_email}</TableCell>
-                <TableCell>{t.profiles?.full_name || <span className="text-muted-foreground">Non assigné</span>}</TableCell>
+                <TableCell>{(t as any).assigned_profile?.full_name || <span className="text-muted-foreground">Non assigné</span>}</TableCell>
                 <TableCell>{getStatusBadge(t.status)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
@@ -208,24 +247,40 @@ const TechniciansView = () => {
 
   const fetchTechnicians = async () => {
     if (hotelId) {
-      const { data } = await supabase
+      // Récupérer les rôles techniciens de cet hôtel
+      const { data: rolesData } = await supabase
         .from("user_roles")
-        .select(`*, profiles(full_name, phone)`)
+        .select("*")
         .eq("role", "technician")
         .eq("hotel_id", hotelId);
       
-      // Récupérer les catégories de chaque technicien
-      if (data) {
-        const techsWithCategories = await Promise.all(
-          data.map(async (tech) => {
+      if (rolesData && rolesData.length > 0) {
+        // Récupérer les profils et catégories pour chaque technicien
+        const techsWithDetails = await Promise.all(
+          rolesData.map(async (role) => {
+            // Récupérer le profil
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("full_name, phone")
+              .eq("id", role.user_id)
+              .maybeSingle();
+            
+            // Récupérer les catégories
             const { data: techCats } = await supabase
               .from("technician_categories")
               .select(`category_id, categories(name, color)`)
-              .eq("technician_id", tech.user_id);
-            return { ...tech, categories: techCats || [] };
+              .eq("technician_id", role.user_id);
+            
+            return { 
+              ...role, 
+              profiles: profileData,
+              categories: techCats || [] 
+            };
           })
         );
-        setTechnicians(techsWithCategories);
+        setTechnicians(techsWithDetails);
+      } else {
+        setTechnicians([]);
       }
     }
   };
