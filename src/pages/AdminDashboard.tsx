@@ -67,12 +67,11 @@ const DashboardView = () => {
   const fetchData = async () => {
     const { data: ticketsData } = await supabase.from("tickets").select(`*, categories (name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false }).limit(5);
     
-    // Techniciens de cet hôtel - jointure directe grâce à la FK
+    // Tous les techniciens (travaillent sur tous les hôtels)
     const { data: techData } = await supabase
       .from("user_roles")
       .select("user_id, profiles(id, full_name)")
-      .eq("role", "technician")
-      .eq("hotel_id", hotelId);
+      .eq("role", "technician");
     
     setTickets(ticketsData || []);
     setTechnicians(techData || []);
@@ -143,12 +142,11 @@ const TicketsView = () => {
       .eq("hotel_id", hotelId)
       .order("created_at", { ascending: false });
     
-    // Techniciens de cet hôtel - jointure directe
+    // Tous les techniciens (travaillent sur tous les hôtels)
     const { data: techData } = await supabase
       .from("user_roles")
       .select("user_id, profiles(id, full_name, phone)")
-      .eq("role", "technician")
-      .eq("hotel_id", hotelId);
+      .eq("role", "technician");
     
     setTickets(t || []);
     setTechnicians(techData || []);
@@ -224,30 +222,27 @@ const TechniciansView = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const fetchTechnicians = async () => {
-    if (hotelId) {
-      // Jointure directe user_roles -> profiles + catégories
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("*, profiles(full_name, phone)")
-        .eq("role", "technician")
-        .eq("hotel_id", hotelId);
+    // Tous les techniciens (travaillent sur tous les hôtels)
+    const { data: rolesData } = await supabase
+      .from("user_roles")
+      .select("*, profiles(full_name, phone)")
+      .eq("role", "technician");
       
-      if (rolesData && rolesData.length > 0) {
-        // Récupérer les catégories pour chaque technicien
-        const techsWithCategories = await Promise.all(
-          rolesData.map(async (role) => {
-            const { data: techCats } = await supabase
-              .from("technician_categories")
-              .select(`category_id, categories(name, color)`)
-              .eq("technician_id", role.user_id);
-            
-            return { ...role, categories: techCats || [] };
-          })
-        );
-        setTechnicians(techsWithCategories);
-      } else {
-        setTechnicians([]);
-      }
+    if (rolesData && rolesData.length > 0) {
+      // Récupérer les catégories pour chaque technicien
+      const techsWithCategories = await Promise.all(
+        rolesData.map(async (role) => {
+          const { data: techCats } = await supabase
+            .from("technician_categories")
+            .select(`category_id, categories(name, color)`)
+            .eq("technician_id", role.user_id);
+          
+          return { ...role, categories: techCats || [] };
+        })
+      );
+      setTechnicians(techsWithCategories);
+    } else {
+      setTechnicians([]);
     }
   };
 
