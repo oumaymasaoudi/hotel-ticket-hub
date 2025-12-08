@@ -36,6 +36,7 @@ import {
   Shield,
   Layers,
   DollarSign,
+  Star,
 } from "lucide-react";
 
 interface AppSidebarProps {
@@ -98,15 +99,15 @@ const getMenuItems = (role: UserRole) => {
 const getRoleBadge = (role: UserRole) => {
   switch (role) {
     case "client":
-      return { label: "Client", variant: "secondary" as const };
+      return { label: "Client", className: "bg-sidebar-accent text-sidebar-foreground border-sidebar-border" };
     case "technician":
-      return { label: "Technicien", variant: "outline" as const };
+      return { label: "Technicien", className: "bg-sidebar-primary/20 text-sidebar-primary border-sidebar-primary/30" };
     case "admin":
-      return { label: "Admin", variant: "default" as const };
+      return { label: "Admin", className: "bg-sidebar-primary text-sidebar-primary-foreground" };
     case "superadmin":
-      return { label: "SuperAdmin", variant: "destructive" as const };
+      return { label: "SuperAdmin", className: "bg-sidebar-primary text-sidebar-primary-foreground" };
     default:
-      return { label: "Utilisateur", variant: "secondary" as const };
+      return { label: "Utilisateur", className: "bg-sidebar-accent text-sidebar-foreground" };
   }
 };
 
@@ -124,59 +125,69 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-border p-4">
+    <Sidebar collapsible="icon" className="bg-sidebar border-r border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-2">
-          <Hotel className="h-8 w-8 text-primary flex-shrink-0" />
+          <Hotel className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-lg font-bold text-foreground">TicketHotel</span>
-              <div className="flex items-center gap-2">
-                <Badge variant={badge.variant} className="text-xs">
-                  {role === "superadmin" && <Shield className="h-3 w-3 mr-1" />}
-                  {badge.label}
-                </Badge>
+              <span className="text-lg font-serif font-bold text-sidebar-foreground">TicketHotel</span>
+              <div className="flex items-center gap-1 mb-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-2 w-2 fill-sidebar-primary text-sidebar-primary" />
+                ))}
               </div>
+              <Badge className={`text-xs ${badge.className}`}>
+                {role === "superadmin" && <Shield className="h-3 w-3 mr-1" />}
+                {badge.label}
+              </Badge>
             </div>
           )}
         </div>
         {!collapsed && hotelName && (
-          <p className="text-xs text-muted-foreground mt-2 truncate">{hotelName}</p>
+          <p className="text-xs text-sidebar-foreground/70 mt-2 truncate">{hotelName}</p>
         )}
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider">Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.url}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      className="flex items-center gap-3"
-                      activeClassName="bg-primary/10 text-primary font-medium"
+              {menuItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.title}
                     >
-                      <item.icon className="h-4 w-4 flex-shrink-0" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      <NavLink
+                        to={item.url}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+                          isActive 
+                            ? "bg-sidebar-primary/20 text-sidebar-primary font-medium" 
+                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        }`}
+                        activeClassName=""
+                      >
+                        <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
+                        <span>{item.title}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-4">
+      <SidebarFooter className="border-t border-sidebar-border p-4">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2"
+          className="w-full justify-start gap-2 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
