@@ -69,7 +69,8 @@ const DashboardView = () => {
 
   const fetchData = async () => {
     const { data: ticketsData } = await supabase.from("tickets").select(`*, categories (name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false }).limit(5);
-    const { data: techData } = await supabase.from("user_roles").select(`user_id, profiles (full_name)`).eq("hotel_id", hotelId).eq("role", "technician");
+    // Techniciens sans hotel_id = disponibles pour tous les hôtels
+    const { data: techData } = await supabase.from("user_roles").select(`user_id, profiles (full_name)`).eq("role", "technician").is("hotel_id", null);
     setTickets(ticketsData || []);
     setTechnicians(techData || []);
     setStats({ open: ticketsData?.filter(t => t.status !== "resolved" && t.status !== "closed").length || 0, escalated: 0, technicians: techData?.length || 0 });
@@ -133,7 +134,8 @@ const TicketsView = () => {
 
   const fetchData = async () => {
     const { data: t } = await supabase.from("tickets").select(`*, categories(name), profiles!tickets_assigned_technician_id_fkey(full_name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false });
-    const { data: tech } = await supabase.from("user_roles").select(`user_id, profiles(full_name)`).eq("hotel_id", hotelId).eq("role", "technician");
+    // Tous les techniciens (sans hotel_id = disponibles pour tous les hôtels)
+    const { data: tech } = await supabase.from("user_roles").select(`user_id, profiles(full_name)`).eq("role", "technician").is("hotel_id", null);
     setTickets(t || []);
     setTechnicians(tech || []);
   };
@@ -229,9 +231,11 @@ const CreateTicketView = () => {
 
 // Technicians View
 const TechniciansView = () => {
-  const { hotelId } = useAuth();
   const [technicians, setTechnicians] = useState<any[]>([]);
-  useEffect(() => { if (hotelId) supabase.from("user_roles").select(`*, profiles(full_name, phone)`).eq("hotel_id", hotelId).eq("role", "technician").then(({ data }) => setTechnicians(data || [])); }, [hotelId]);
+  useEffect(() => { 
+    // Tous les techniciens disponibles (sans hotel_id)
+    supabase.from("user_roles").select(`*, profiles(full_name, phone)`).eq("role", "technician").is("hotel_id", null).then(({ data }) => setTechnicians(data || [])); 
+  }, []);
 
   return (
     <div className="space-y-6">

@@ -74,7 +74,7 @@ const Signup = () => {
       return;
     }
 
-    if ((formData.role === "technician" || formData.role === "admin") && !formData.hotelId) {
+    if (formData.role === "admin" && !formData.hotelId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un hôtel",
@@ -200,7 +200,7 @@ const Signup = () => {
             </Select>
           </div>
 
-          {(formData.role === "technician" || formData.role === "admin") && (
+          {formData.role === "admin" && (
             <div>
               <Label htmlFor="hotel">Hôtel</Label>
               <Select value={formData.hotelId} onValueChange={(value) => setFormData({ ...formData, hotelId: value })}>
