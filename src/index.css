@@ -5,135 +5,138 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Luxury Hotel Theme - Petrol Blue & Gold
+/* Luxury Hotel Theme - Deep Navy #101066 with Gold & Silver
    A majestic design system for 5-star hotels
    All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Petrol Blue Luxury Palette */
-    --background: 200 25% 95%;
-    --foreground: 200 40% 12%;
+    /* Light Theme - Elegant & Clean */
+    --background: 240 20% 97%;
+    --foreground: 240 73% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 200 40% 12%;
+    --card-foreground: 240 73% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 200 40% 12%;
+    --popover-foreground: 240 73% 15%;
 
-    /* Deep Petrol Blue Primary */
-    --primary: 195 70% 22%;
-    --primary-foreground: 45 50% 95%;
+    /* Deep Navy Primary #101066 = HSL(240, 73%, 23%) */
+    --primary: 240 73% 23%;
+    --primary-foreground: 0 0% 98%;
 
     /* Rich Gold Secondary */
-    --secondary: 42 75% 50%;
-    --secondary-foreground: 200 40% 12%;
+    --secondary: 42 80% 52%;
+    --secondary-foreground: 240 73% 15%;
 
-    --muted: 200 15% 75%;
-    --muted-foreground: 200 25% 40%;
+    /* Silver accent */
+    --muted: 220 15% 75%;
+    --muted-foreground: 240 30% 35%;
 
-    --accent: 195 30% 90%;
-    --accent-foreground: 195 70% 22%;
+    --accent: 240 25% 94%;
+    --accent-foreground: 240 73% 23%;
 
     --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 20% 85%;
-    --input: 200 20% 85%;
-    --ring: 42 75% 50%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 42 80% 52%;
 
     --radius: 0.5rem;
 
-    /* Sidebar - Dark Petrol */
-    --sidebar-background: 195 70% 15%;
-    --sidebar-foreground: 45 30% 95%;
-    --sidebar-primary: 42 75% 50%;
-    --sidebar-primary-foreground: 200 40% 12%;
-    --sidebar-accent: 195 50% 25%;
-    --sidebar-accent-foreground: 45 30% 95%;
-    --sidebar-border: 195 50% 25%;
-    --sidebar-ring: 42 75% 50%;
-    --sidebar: 195 70% 15%;
+    /* Sidebar - Deep Navy */
+    --sidebar-background: 240 73% 18%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 42 80% 52%;
+    --sidebar-primary-foreground: 240 73% 15%;
+    --sidebar-accent: 240 60% 28%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 240 50% 28%;
+    --sidebar-ring: 42 80% 52%;
+    --sidebar: 240 73% 18%;
 
-    /* Charts - Luxury Palette */
-    --chart-1: 195 70% 30%;
-    --chart-2: 42 75% 50%;
-    --chart-3: 195 40% 50%;
-    --chart-4: 42 60% 40%;
-    --chart-5: 195 30% 70%;
+    /* Charts */
+    --chart-1: 240 73% 30%;
+    --chart-2: 42 80% 52%;
+    --chart-3: 220 15% 60%;
+    --chart-4: 42 60% 42%;
+    --chart-5: 240 40% 50%;
 
     /* Typography */
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-serif: 'Playfair Display', 'Cormorant Garamond', ui-serif, Georgia, serif;
     --font-mono: 'Space Mono', ui-monospace, monospace;
 
-    /* Luxury Shadows with warm tint */
-    --shadow-2xs: 0 1px 3px 0px hsl(200 30% 20% / 0.05);
-    --shadow-xs: 0 1px 3px 0px hsl(200 30% 20% / 0.08);
-    --shadow-sm: 0 2px 6px 0px hsl(200 30% 20% / 0.1), 0 1px 2px -1px hsl(200 30% 20% / 0.1);
-    --shadow: 0 4px 12px 0px hsl(200 30% 20% / 0.12), 0 2px 4px -1px hsl(200 30% 20% / 0.1);
-    --shadow-md: 0 6px 16px 0px hsl(200 30% 20% / 0.12), 0 4px 6px -1px hsl(200 30% 20% / 0.1);
-    --shadow-lg: 0 10px 25px 0px hsl(200 30% 20% / 0.15), 0 6px 10px -1px hsl(200 30% 20% / 0.1);
-    --shadow-xl: 0 20px 40px 0px hsl(200 30% 20% / 0.18), 0 10px 15px -1px hsl(200 30% 20% / 0.1);
-    --shadow-2xl: 0 25px 50px 0px hsl(200 30% 20% / 0.25);
+    /* Luxury Shadows */
+    --shadow-2xs: 0 1px 3px 0px hsl(240 30% 20% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(240 30% 20% / 0.08);
+    --shadow-sm: 0 2px 6px 0px hsl(240 30% 20% / 0.1), 0 1px 2px -1px hsl(240 30% 20% / 0.1);
+    --shadow: 0 4px 12px 0px hsl(240 30% 20% / 0.12), 0 2px 4px -1px hsl(240 30% 20% / 0.1);
+    --shadow-md: 0 6px 16px 0px hsl(240 30% 20% / 0.12), 0 4px 6px -1px hsl(240 30% 20% / 0.1);
+    --shadow-lg: 0 10px 25px 0px hsl(240 30% 20% / 0.15), 0 6px 10px -1px hsl(240 30% 20% / 0.1);
+    --shadow-xl: 0 20px 40px 0px hsl(240 30% 20% / 0.18), 0 10px 15px -1px hsl(240 30% 20% / 0.1);
+    --shadow-2xl: 0 25px 50px 0px hsl(240 30% 20% / 0.25);
 
-    /* Gold glow for luxury elements */
-    --shadow-gold: 0 0 30px hsl(42 75% 50% / 0.3);
+    /* Gold & Silver glows */
+    --shadow-gold: 0 0 30px hsl(42 80% 52% / 0.3);
+    --shadow-silver: 0 0 30px hsl(220 15% 75% / 0.4);
 
     --tracking-normal: 0em;
     --spacing: 0.25rem;
   }
 
   .dark {
-    /* Dark Petrol Blue Theme */
-    --background: 200 40% 8%;
-    --foreground: 45 20% 95%;
+    /* Dark Theme - Deep Navy */
+    --background: 240 73% 8%;
+    --foreground: 0 0% 95%;
 
-    --card: 195 40% 12%;
-    --card-foreground: 45 20% 95%;
+    --card: 240 60% 12%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 195 45% 14%;
-    --popover-foreground: 45 20% 95%;
+    --popover: 240 55% 14%;
+    --popover-foreground: 0 0% 95%;
 
-    /* Deep Petrol Blue Primary */
-    --primary: 42 75% 55%;
-    --primary-foreground: 200 40% 8%;
+    /* Gold becomes primary in dark mode for visibility */
+    --primary: 42 80% 55%;
+    --primary-foreground: 240 73% 10%;
 
-    /* Gold Secondary */
-    --secondary: 195 50% 30%;
-    --secondary-foreground: 45 20% 95%;
+    /* Navy Secondary */
+    --secondary: 240 50% 35%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 195 30% 25%;
-    --muted-foreground: 200 15% 65%;
+    /* Silver muted */
+    --muted: 220 20% 30%;
+    --muted-foreground: 220 15% 70%;
 
-    --accent: 195 45% 18%;
-    --accent-foreground: 42 75% 55%;
+    --accent: 240 50% 18%;
+    --accent-foreground: 42 80% 55%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 195 35% 22%;
-    --input: 195 35% 22%;
-    --ring: 42 75% 55%;
+    --border: 240 40% 22%;
+    --input: 240 40% 22%;
+    --ring: 42 80% 55%;
 
-    /* Sidebar - Darker Petrol */
-    --sidebar-background: 200 50% 6%;
-    --sidebar-foreground: 45 20% 90%;
-    --sidebar-primary: 42 75% 55%;
-    --sidebar-primary-foreground: 200 40% 8%;
-    --sidebar-accent: 195 40% 15%;
-    --sidebar-accent-foreground: 45 20% 90%;
-    --sidebar-border: 195 35% 18%;
-    --sidebar-ring: 42 75% 55%;
-    --sidebar: 200 50% 6%;
+    /* Sidebar - Darker Navy */
+    --sidebar-background: 240 73% 6%;
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 42 80% 55%;
+    --sidebar-primary-foreground: 240 73% 10%;
+    --sidebar-accent: 240 50% 15%;
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 240 40% 18%;
+    --sidebar-ring: 42 80% 55%;
+    --sidebar: 240 73% 6%;
 
     /* Charts */
-    --chart-1: 42 75% 55%;
-    --chart-2: 195 50% 45%;
-    --chart-3: 42 60% 45%;
-    --chart-4: 195 40% 35%;
-    --chart-5: 195 30% 50%;
+    --chart-1: 42 80% 55%;
+    --chart-2: 240 50% 45%;
+    --chart-3: 220 20% 55%;
+    --chart-4: 42 60% 45%;
+    --chart-5: 240 40% 55%;
 
     --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
     --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
@@ -143,7 +146,8 @@
     --shadow-lg: 0 10px 25px 0px hsl(0 0% 0% / 0.3), 0 6px 10px -1px hsl(0 0% 0% / 0.15);
     --shadow-xl: 0 20px 40px 0px hsl(0 0% 0% / 0.35), 0 10px 15px -1px hsl(0 0% 0% / 0.2);
     --shadow-2xl: 0 25px 50px 0px hsl(0 0% 0% / 0.45);
-    --shadow-gold: 0 0 40px hsl(42 75% 50% / 0.25);
+    --shadow-gold: 0 0 40px hsl(42 80% 52% / 0.25);
+    --shadow-silver: 0 0 40px hsl(220 15% 75% / 0.2);
   }
 }
 
@@ -164,26 +168,42 @@
 @layer components {
   /* Luxury glass effect */
   .glass-luxury {
-    @apply backdrop-blur-xl bg-card/80 border border-border/50;
+    @apply backdrop-blur-xl bg-card/90 border border-border/50;
   }
 
   /* Gold accent border */
   .border-gold {
-    border-color: hsl(42 75% 50%);
+    border-color: hsl(42 80% 52%);
+  }
+
+  /* Silver accent border */
+  .border-silver {
+    border-color: hsl(220 20% 78%);
   }
 
   /* Gradient backgrounds */
   .bg-gradient-luxury {
-    background: linear-gradient(135deg, hsl(195 70% 15%) 0%, hsl(200 50% 8%) 100%);
+    background: linear-gradient(135deg, hsl(240 73% 18%) 0%, hsl(240 73% 10%) 100%);
   }
 
   .bg-gradient-gold {
-    background: linear-gradient(135deg, hsl(42 75% 55%) 0%, hsl(38 70% 45%) 100%);
+    background: linear-gradient(135deg, hsl(42 80% 55%) 0%, hsl(38 75% 45%) 100%);
   }
 
-  /* Text gradient */
+  .bg-gradient-silver {
+    background: linear-gradient(135deg, hsl(220 20% 85%) 0%, hsl(220 15% 70%) 100%);
+  }
+
+  /* Text gradients */
   .text-gradient-gold {
-    background: linear-gradient(135deg, hsl(42 75% 60%) 0%, hsl(38 80% 50%) 100%);
+    background: linear-gradient(135deg, hsl(42 85% 60%) 0%, hsl(38 80% 48%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-silver {
+    background: linear-gradient(135deg, hsl(220 25% 88%) 0%, hsl(220 15% 70%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -206,7 +226,7 @@
   .underline-gold::after {
     content: '';
     @apply absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300;
-    background: linear-gradient(90deg, hsl(42 75% 55%) 0%, hsl(38 70% 45%) 100%);
+    background: linear-gradient(90deg, hsl(42 80% 55%) 0%, hsl(38 75% 45%) 100%);
   }
 
   .underline-gold:hover::after {
@@ -218,5 +238,9 @@
   /* Luxury shadow utilities */
   .shadow-gold {
     box-shadow: var(--shadow-gold);
+  }
+
+  .shadow-silver {
+    box-shadow: var(--shadow-silver);
   }
 }
