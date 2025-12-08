@@ -25,16 +25,29 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Index />} />
             <Route path="/create-ticket" element={<CreateTicket />} />
             <Route path="/track-ticket" element={<TrackTicket />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            
+            {/* Client routes */}
             <Route path="/dashboard/client" element={<ClientDashboard />} />
+            <Route path="/dashboard/client/*" element={<ClientDashboard />} />
+            
+            {/* Technician routes */}
             <Route path="/dashboard/technician" element={<TechnicianDashboard />} />
+            <Route path="/dashboard/technician/*" element={<TechnicianDashboard />} />
+            
+            {/* Admin routes */}
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
+            <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
+            
+            {/* SuperAdmin routes */}
             <Route path="/dashboard/superadmin" element={<SuperAdminDashboard />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/dashboard/superadmin/*" element={<SuperAdminDashboard />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

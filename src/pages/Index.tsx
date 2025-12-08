@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Hotel, TicketCheck, Eye, LogIn } from "lucide-react";
+import { PublicHeader } from "@/components/layout/PublicHeader";
+import { Hotel, TicketCheck, Eye, Users, Building2, Shield, Clock, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
@@ -7,18 +8,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background">
-      <nav className="border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Hotel className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">TicketHotel</span>
-          </div>
-          <Button variant="outline" onClick={() => navigate("/login")}>
-            <LogIn className="mr-2 h-4 w-4" />
-            Connexion
-          </Button>
-        </div>
-      </nav>
+      <PublicHeader />
 
       <main className="container mx-auto px-4 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -65,7 +55,7 @@ const Index = () => {
             
             <div className="bg-card p-6 rounded-lg shadow-md border border-border">
               <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Eye className="h-6 w-6 text-primary" />
+                <Clock className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-lg font-semibold mb-2 text-card-foreground">Suivi en temps réel</h3>
               <p className="text-muted-foreground">
@@ -75,12 +65,51 @@ const Index = () => {
             
             <div className="bg-card p-6 rounded-lg shadow-md border border-border">
               <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mb-4 mx-auto">
-                <Hotel className="h-6 w-6 text-primary" />
+                <CheckCircle className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2 text-card-foreground">Multi-hôtels</h3>
+              <h3 className="text-lg font-semibold mb-2 text-card-foreground">Résolution garantie</h3>
               <p className="text-muted-foreground">
-                Solution adaptée à tous types d'établissements hôteliers
+                Des techniciens qualifiés pour résoudre vos problèmes rapidement
               </p>
+            </div>
+          </div>
+
+          {/* Section pour les professionnels */}
+          <div className="pt-16 border-t border-border mt-16">
+            <h2 className="text-2xl font-bold text-foreground mb-8">Espace professionnel</h2>
+            <div className="grid md:grid-cols-4 gap-4">
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2"
+                onClick={() => navigate("/login")}
+              >
+                <Users className="h-6 w-6 text-primary" />
+                <span>Client connecté</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2"
+                onClick={() => navigate("/login")}
+              >
+                <Building2 className="h-6 w-6 text-primary" />
+                <span>Technicien</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2"
+                onClick={() => navigate("/login")}
+              >
+                <Hotel className="h-6 w-6 text-primary" />
+                <span>Admin Hôtel</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2"
+                onClick={() => navigate("/login")}
+              >
+                <Shield className="h-6 w-6 text-primary" />
+                <span>SuperAdmin</span>
+              </Button>
             </div>
           </div>
         </div>

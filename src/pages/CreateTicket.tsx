@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,8 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoryCard } from "@/components/CategoryCard";
-import { ArrowLeft, ArrowRight, Check, Hotel } from "lucide-react";
+import { PublicHeader } from "@/components/layout/PublicHeader";
+import { ArrowLeft, ArrowRight, Check, Copy, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   Zap,
   Droplet,
@@ -23,29 +26,39 @@ import {
   Package,
 } from "lucide-react";
 
-const categories = [
-  { id: "electricite", name: "Electricité", icon: Zap, color: "yellow" },
-  { id: "plomberie", name: "Plomberie", icon: Droplet, color: "blue" },
-  { id: "climatisation", name: "Climatisation / Chauffage", icon: Snowflake, color: "cyan" },
-  { id: "internet", name: "Internet / WiFi", icon: Wifi, color: "purple" },
-  { id: "serrurerie", name: "Serrurerie", icon: Key, color: "gray" },
-  { id: "chambre", name: "Chambre", icon: BedDouble, color: "pink" },
-  { id: "salle-bain", name: "Salle de bain", icon: Bath, color: "teal" },
-  { id: "bruit", name: "Bruit", icon: Volume2, color: "orange" },
-  { id: "proprete", name: "Propreté", icon: Sparkles, color: "green" },
-  { id: "securite", name: "Sécurité", icon: Shield, color: "red" },
-  { id: "restauration", name: "Restauration / Room Service", icon: UtensilsCrossed, color: "amber" },
-  { id: "autres", name: "Autres", icon: Package, color: "slate" },
-];
+const iconMap: Record<string, any> = {
+  Zap, Droplet, Snowflake, Wifi, Key, BedDouble, Bath, Volume2, Sparkles, Shield, UtensilsCrossed, Package,
+};
 
 const CreateTicket = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [hotel, setHotel] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [hotelId, setHotelId] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [createdTicket, setCreatedTicket] = useState<{ number: string; category: string } | null>(null);
+  
+  const [hotels, setHotels] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
+
+  useEffect(() => {
+    fetchHotels();
+    fetchCategories();
+  }, []);
+
+  const fetchHotels = async () => {
+    const { data } = await supabase.from("hotels").select("id, name").eq("is_active", true);
+    if (data) setHotels(data);
+  };
+
+  const fetchCategories = async () => {
+    const { data } = await supabase.from("categories").select("id, name, icon, color");
+    if (data) setCategories(data);
+  };
 
   const handleNext = () => {
     if (step < 4) setStep(step + 1);
@@ -55,19 +68,65 @@ const CreateTicket = () => {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    // TODO: Submit ticket
-    navigate("/track-ticket");
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // Generate ticket number
+      const { data: ticketNumber } = await supabase.rpc("generate_ticket_number");
+
+      const { error } = await supabase.from("tickets").insert({
+        ticket_number: ticketNumber,
+        client_email: email,
+        client_phone: phone || null,
+        hotel_id: hotelId,
+        category_id: selectedCategoryId,
+        description,
+        status: "open",
+      });
+
+      if (error) throw error;
+
+      const category = categories.find(c => c.id === selectedCategoryId);
+      setCreatedTicket({
+        number: ticketNumber,
+        category: category?.name || "",
+      });
+      
+      setStep(4);
+      
+      toast({
+        title: "Ticket créé avec succès",
+        description: `Votre numéro de ticket est ${ticketNumber}`,
+      });
+    } catch (error) {
+      console.error("Error creating ticket:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le ticket. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyTicketNumber = () => {
+    if (createdTicket) {
+      navigator.clipboard.writeText(createdTicket.number);
+      toast({
+        title: "Copié !",
+        description: "Le numéro de ticket a été copié dans le presse-papier.",
+      });
+    }
+  };
+
+  const getIconComponent = (iconName: string) => {
+    return iconMap[iconName] || Package;
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background">
-      <nav className="border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-2">
-          <Hotel className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-foreground">TicketHotel</span>
-        </div>
-      </nav>
+      <PublicHeader showBackButton showLoginButton={false} />
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
@@ -80,7 +139,7 @@ const CreateTicket = () => {
                     step >= s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}
                 >
-                  {s}
+                  {step > s ? <Check className="h-5 w-5" /> : s}
                 </div>
                 {s < 4 && (
                   <div
@@ -94,10 +153,10 @@ const CreateTicket = () => {
             ))}
           </div>
           <div className="grid grid-cols-4 gap-2 text-xs text-center text-muted-foreground">
-            <div>Identification</div>
-            <div>Catégorie</div>
-            <div>Détails</div>
-            <div>Confirmation</div>
+            <div className={step === 1 ? "text-primary font-medium" : ""}>Identification</div>
+            <div className={step === 2 ? "text-primary font-medium" : ""}>Catégorie</div>
+            <div className={step === 3 ? "text-primary font-medium" : ""}>Détails</div>
+            <div className={step === 4 ? "text-primary font-medium" : ""}>Confirmation</div>
           </div>
         </div>
 
@@ -110,7 +169,7 @@ const CreateTicket = () => {
               </div>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -118,6 +177,9 @@ const CreateTicket = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Le numéro de ticket sera envoyé à cette adresse
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="phone">Téléphone (optionnel)</Label>
@@ -130,21 +192,27 @@ const CreateTicket = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="hotel">Sélection de l'hôtel</Label>
-                  <Select value={hotel} onValueChange={setHotel}>
+                  <Label htmlFor="hotel">Sélection de l'hôtel *</Label>
+                  <Select value={hotelId} onValueChange={setHotelId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choisissez votre hôtel" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hotel-1">Hôtel Paris Centre</SelectItem>
-                      <SelectItem value="hotel-2">Hôtel Lyon Confluence</SelectItem>
-                      <SelectItem value="hotel-3">Hôtel Marseille Vieux Port</SelectItem>
+                      {hotels.map((hotel) => (
+                        <SelectItem key={hotel.id} value={hotel.id}>
+                          {hotel.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className="flex justify-end">
-                <Button onClick={handleNext} disabled={!email || !hotel}>
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={() => navigate("/")}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Annuler
+                </Button>
+                <Button onClick={handleNext} disabled={!email || !hotelId}>
                   Continuer
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -159,23 +227,26 @@ const CreateTicket = () => {
                 <p className="text-muted-foreground">Choisissez la catégorie correspondant à votre problème</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map((category) => (
-                  <CategoryCard
-                    key={category.id}
-                    icon={category.icon}
-                    name={category.name}
-                    color={category.color}
-                    selected={selectedCategory === category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                  />
-                ))}
+                {categories.map((category) => {
+                  const IconComponent = getIconComponent(category.icon);
+                  return (
+                    <CategoryCard
+                      key={category.id}
+                      icon={IconComponent}
+                      name={category.name}
+                      color={category.color}
+                      selected={selectedCategoryId === category.id}
+                      onClick={() => setSelectedCategoryId(category.id)}
+                    />
+                  );
+                })}
               </div>
               <div className="flex justify-between">
                 <Button variant="outline" onClick={handleBack}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Retour
                 </Button>
-                <Button onClick={handleNext} disabled={!selectedCategory}>
+                <Button onClick={handleNext} disabled={!selectedCategoryId}>
                   Continuer
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -191,7 +262,7 @@ const CreateTicket = () => {
               </div>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="description">Description du problème</Label>
+                  <Label htmlFor="description">Description du problème *</Label>
                   <Textarea
                     id="description"
                     placeholder="Décrivez votre problème en détail..."
@@ -206,15 +277,14 @@ const CreateTicket = () => {
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Retour
                 </Button>
-                <Button onClick={handleNext} disabled={!description}>
-                  Continuer
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button onClick={handleSubmit} disabled={!description || loading}>
+                  {loading ? "Création..." : "Créer le ticket"}
                 </Button>
               </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 4 && createdTicket && (
             <div className="space-y-6">
               <div className="text-center">
                 <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -225,26 +295,42 @@ const CreateTicket = () => {
               </div>
               
               <Card className="p-6 bg-accent border-border">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
                     <span className="font-medium text-card-foreground">Numéro du ticket :</span>
-                    <span className="font-mono font-bold text-primary">TK-45821</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-primary text-lg">{createdTicket.number}</span>
+                      <Button variant="outline" size="icon" onClick={copyTicketNumber}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium text-card-foreground">Catégorie :</span>
-                    <span className="text-card-foreground">
-                      {categories.find((c) => c.id === selectedCategory)?.name}
-                    </span>
+                    <span className="text-card-foreground">{createdTicket.category}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-medium text-card-foreground">Temps estimé :</span>
-                    <span className="text-card-foreground">2-4 heures</span>
+                    <span className="font-medium text-card-foreground">Email :</span>
+                    <span className="text-card-foreground">{email}</span>
                   </div>
                 </div>
               </Card>
 
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Mail className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-card-foreground">Conservez votre numéro de ticket</p>
+                    <p className="text-sm text-muted-foreground">
+                      Vous pouvez copier le numéro ci-dessus ou le retrouver dans votre email.
+                      Il vous sera demandé pour suivre l'avancement de votre demande.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-3">
-                <Button onClick={() => navigate("/track-ticket")} className="w-full">
+                <Button onClick={() => navigate(`/track-ticket?email=${email}&ticket=${createdTicket.number}`)} className="w-full">
                   Suivre mon ticket
                 </Button>
                 <Button variant="outline" onClick={() => navigate("/")} className="w-full">
