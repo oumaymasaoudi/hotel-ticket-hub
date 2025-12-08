@@ -45,6 +45,7 @@ const SuperAdminDashboard = () => {
     if (currentPath.includes("/plans")) return "plans";
     if (currentPath.includes("/users")) return "users";
     if (currentPath.includes("/categories")) return "categories";
+    if (currentPath.includes("/escalations")) return "escalations";
     if (currentPath.includes("/payments")) return "payments";
     if (currentPath.includes("/reports")) return "reports";
     if (currentPath.includes("/logs")) return "logs";
@@ -61,6 +62,7 @@ const SuperAdminDashboard = () => {
       {activeView === "plans" && <PlansView />}
       {activeView === "users" && <UsersView />}
       {activeView === "categories" && <CategoriesView />}
+      {activeView === "escalations" && <EscalationsView />}
       {activeView === "payments" && <PaymentsView />}
       {activeView === "reports" && <ReportsView />}
       {activeView === "logs" && <LogsView />}
@@ -76,6 +78,7 @@ const getTitle = (view: string) => {
     plans: "Plans d'abonnement",
     users: "Utilisateurs",
     categories: "Catégories",
+    escalations: "Tickets Escaladés",
     payments: "Paiements",
     reports: "Rapports",
     logs: "Logs d'activité",
@@ -83,6 +86,10 @@ const getTitle = (view: string) => {
   };
   return titles[view] || "SuperAdmin";
 };
+
+// Escalations View
+import SuperAdminEscalationsView from '@/components/escalations/SuperAdminEscalationsView';
+const EscalationsView = () => <SuperAdminEscalationsView />;
 
 // Dashboard View
 import SuperAdminDashboardCharts from '@/components/dashboard/SuperAdminDashboardCharts';
