@@ -38,6 +38,7 @@ import {
   DollarSign,
   Star,
 } from "lucide-react";
+import sidebarBg from "@/assets/sidebar-luxury-bg.jpg";
 
 interface AppSidebarProps {
   role: UserRole;
@@ -99,7 +100,7 @@ const getMenuItems = (role: UserRole) => {
 const getRoleBadge = (role: UserRole) => {
   switch (role) {
     case "client":
-      return { label: "Client", className: "bg-sidebar-accent text-sidebar-foreground border-sidebar-border" };
+      return { label: "Client", className: "bg-white/10 text-white/90 border-white/20" };
     case "technician":
       return { label: "Technicien", className: "bg-sidebar-primary/20 text-sidebar-primary border-sidebar-primary/30" };
     case "admin":
@@ -107,7 +108,7 @@ const getRoleBadge = (role: UserRole) => {
     case "superadmin":
       return { label: "SuperAdmin", className: "bg-sidebar-primary text-sidebar-primary-foreground" };
     default:
-      return { label: "Utilisateur", className: "bg-sidebar-accent text-sidebar-foreground" };
+      return { label: "Utilisateur", className: "bg-white/10 text-white/90" };
   }
 };
 
@@ -125,13 +126,21 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar collapsible="icon" className="bg-sidebar border-r border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border overflow-hidden">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${sidebarBg})` }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-sidebar/80 via-sidebar/70 to-sidebar/90" />
+      
+      {/* Content */}
+      <SidebarHeader className="relative border-b border-white/10 p-4">
         <div className="flex items-center gap-2">
           <Hotel className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-lg font-serif font-bold text-sidebar-foreground">TicketHotel</span>
+              <span className="text-lg font-serif font-bold text-white">TicketHotel</span>
               <div className="flex items-center gap-1 mb-1">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="h-2 w-2 fill-sidebar-primary text-sidebar-primary" />
@@ -145,13 +154,13 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
           )}
         </div>
         {!collapsed && hotelName && (
-          <p className="text-xs text-sidebar-foreground/70 mt-2 truncate">{hotelName}</p>
+          <p className="text-xs text-white/60 mt-2 truncate">{hotelName}</p>
         )}
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="relative">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider">Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-white/50 text-xs uppercase tracking-wider px-4">Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
@@ -165,10 +174,10 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
                     >
                       <NavLink
                         to={item.url}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${
+                        className={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all ${
                           isActive 
-                            ? "bg-sidebar-primary/20 text-sidebar-primary font-medium" 
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                            ? "bg-sidebar-primary/20 text-sidebar-primary font-medium border-l-2 border-sidebar-primary" 
+                            : "text-white/80 hover:bg-white/10 hover:text-white"
                         }`}
                         activeClassName=""
                       >
@@ -184,10 +193,10 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
+      <SidebarFooter className="relative border-t border-white/10 p-4">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-2 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          className="w-full justify-start gap-2 text-white/70 hover:text-white hover:bg-white/10"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
