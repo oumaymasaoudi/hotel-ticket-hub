@@ -6,15 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TicketCheck, AlertTriangle, Users, CreditCard, Plus, Edit, Trash2, Eye, Search, UserPlus } from "lucide-react";
+import { TicketCheck, AlertTriangle, Users, CreditCard, Plus, Edit, Trash2, Eye, Search, UserPlus, ArrowUpCircle, Clock } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 const AdminDashboard = () => {
   const location = useLocation();
@@ -732,11 +734,292 @@ const TechniciansView = () => {
 };
 
 // Escalations View
-const EscalationsView = () => (
-  <div className="space-y-6">
-    <Card className="p-8 text-center"><AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">Aucune escalade en cours</p></Card>
-  </div>
-);
+const EscalationsView = () => {
+  const { hotelId, user } = useAuth();
+  const { toast } = useToast();
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [escalatedTickets, setEscalatedTickets] = useState<any[]>([]);
+  const [showEscalateModal, setShowEscalateModal] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [escalationReason, setEscalationReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailTicket, setDetailTicket] = useState<any>(null);
+
+  useEffect(() => {
+    if (hotelId) fetchData();
+  }, [hotelId]);
+
+  const fetchData = async () => {
+    const { data: ticketsData } = await supabase
+      .from("tickets")
+      .select(`*, categories(id, name, color)`)
+      .eq("hotel_id", hotelId)
+      .in("status", ["open", "in_progress", "pending"])
+      .order("created_at", { ascending: false });
+
+    if (ticketsData) {
+      const ticketsWithDetails = await Promise.all(
+        ticketsData.map(async (ticket) => {
+          let techName = null;
+          if (ticket.assigned_technician_id) {
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", ticket.assigned_technician_id)
+              .single();
+            techName = profileData?.full_name || null;
+          }
+          
+          const { data: historyData } = await supabase
+            .from("ticket_history")
+            .select("*")
+            .eq("ticket_id", ticket.id)
+            .eq("action_type", "escalated")
+            .limit(1);
+          
+          const isEscalated = historyData && historyData.length > 0;
+          return { ...ticket, technician_name: techName, is_escalated: isEscalated };
+        })
+      );
+      
+      setTickets(ticketsWithDetails.filter(t => !t.is_escalated));
+      setEscalatedTickets(ticketsWithDetails.filter(t => t.is_escalated));
+    }
+  };
+
+  const handleEscalate = async () => {
+    if (!selectedTicket || !escalationReason.trim()) {
+      toast({ title: "Erreur", description: "Veuillez indiquer une raison d'escalade", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await supabase.from("ticket_history").insert({
+        ticket_id: selectedTicket.id,
+        action_type: "escalated",
+        old_value: selectedTicket.technician_name || "Non assigné",
+        new_value: escalationReason,
+        performed_by: user?.id || null
+      });
+
+      if (selectedTicket.assigned_technician_id) {
+        await supabase.from("ticket_history").insert({
+          ticket_id: selectedTicket.id,
+          action_type: "technician_archived",
+          old_value: selectedTicket.technician_name,
+          new_value: "Escalade - Technicien archivé",
+          performed_by: user?.id || null
+        });
+      }
+
+      await supabase
+        .from("tickets")
+        .update({ status: "pending", assigned_technician_id: null })
+        .eq("id", selectedTicket.id);
+
+      await supabase.from("ticket_history").insert({
+        ticket_id: selectedTicket.id,
+        action_type: "status_change",
+        old_value: selectedTicket.status,
+        new_value: "pending",
+        performed_by: user?.id || null
+      });
+
+      toast({ title: "Ticket escaladé", description: "Le ticket a été escaladé au SuperAdmin" });
+      setShowEscalateModal(false);
+      setEscalationReason("");
+      setSelectedTicket(null);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "resolved": return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Résolu</Badge>;
+      case "in_progress": return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">En cours</Badge>;
+      case "pending": return <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">En attente</Badge>;
+      default: return <Badge className="bg-primary/20 text-primary border-primary/30">Ouvert</Badge>;
+    }
+  };
+
+  const getSlaStatus = (ticket: any) => {
+    if (!ticket.sla_deadline) return null;
+    const now = new Date();
+    const deadline = new Date(ticket.sla_deadline);
+    const hoursRemaining = Math.round((deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
+    if (hoursRemaining < 0) return <Badge variant="destructive" className="text-xs">SLA dépassé</Badge>;
+    if (hoursRemaining <= 4) return <Badge className="bg-orange-500/20 text-orange-600 text-xs">SLA critique</Badge>;
+    return null;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-3 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <TicketCheck className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{tickets.length}</p>
+              <p className="text-sm text-muted-foreground">À escalader</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-orange-500/10 rounded-full flex items-center justify-center">
+              <ArrowUpCircle className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{escalatedTickets.length}</p>
+              <p className="text-sm text-muted-foreground">Déjà escaladés</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-destructive/10 rounded-full flex items-center justify-center">
+              <Clock className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{tickets.filter(t => t.sla_deadline && new Date(t.sla_deadline) < new Date()).length}</p>
+              <p className="text-sm text-muted-foreground">SLA dépassés</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold">Tickets pouvant être escaladés</h3>
+          <p className="text-sm text-muted-foreground">Escaladez les tickets complexes vers le SuperAdmin</p>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Numéro</TableHead>
+              <TableHead>Catégorie</TableHead>
+              <TableHead>Technicien</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead>SLA</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tickets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Aucun ticket à escalader
+                </TableCell>
+              </TableRow>
+            ) : (
+              tickets.map((ticket) => (
+                <TableRow key={ticket.id}>
+                  <TableCell className="font-mono font-medium">{ticket.ticket_number}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" style={{ borderColor: ticket.categories?.color, color: ticket.categories?.color, backgroundColor: `${ticket.categories?.color}15` }}>
+                      {ticket.categories?.name}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{ticket.technician_name || <span className="text-muted-foreground italic">Non assigné</span>}</TableCell>
+                  <TableCell>{getStatusBadge(ticket.status)}</TableCell>
+                  <TableCell>
+                    {getSlaStatus(ticket) || (ticket.sla_deadline && <span className="text-xs text-muted-foreground">{format(new Date(ticket.sla_deadline), "dd/MM HH:mm", { locale: fr })}</span>)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => { setDetailTicket(ticket); setShowDetailModal(true); }}><Eye className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="sm" onClick={() => { setSelectedTicket(ticket); setShowEscalateModal(true); }}>
+                        <ArrowUpCircle className="h-4 w-4 mr-1" />Escalader
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {escalatedTickets.length > 0 && (
+        <Card className="overflow-hidden">
+          <div className="p-4 border-b">
+            <h3 className="font-semibold">Tickets escaladés</h3>
+            <p className="text-sm text-muted-foreground">En attente de traitement par le SuperAdmin</p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Numéro</TableHead>
+                <TableHead>Catégorie</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Date escalade</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {escalatedTickets.map((ticket) => (
+                <TableRow key={ticket.id}>
+                  <TableCell className="font-mono font-medium">{ticket.ticket_number}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" style={{ borderColor: ticket.categories?.color, color: ticket.categories?.color, backgroundColor: `${ticket.categories?.color}15` }}>
+                      {ticket.categories?.name}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{getStatusBadge(ticket.status)}</TableCell>
+                  <TableCell className="text-muted-foreground">{format(new Date(ticket.updated_at), "dd/MM/yyyy HH:mm", { locale: fr })}</TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" onClick={() => { setDetailTicket(ticket); setShowDetailModal(true); }}><Eye className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      <Dialog open={showEscalateModal} onOpenChange={setShowEscalateModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpCircle className="h-5 w-5 text-destructive" />Escalader le ticket
+            </DialogTitle>
+            <DialogDescription>Cette action transférera le ticket au SuperAdmin pour traitement prioritaire.</DialogDescription>
+          </DialogHeader>
+          {selectedTicket && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+                <div className="flex justify-between"><span className="text-sm text-muted-foreground">Ticket</span><span className="font-mono font-medium">{selectedTicket.ticket_number}</span></div>
+                <div className="flex justify-between"><span className="text-sm text-muted-foreground">Catégorie</span><Badge variant="outline" style={{ borderColor: selectedTicket.categories?.color, color: selectedTicket.categories?.color }}>{selectedTicket.categories?.name}</Badge></div>
+                {selectedTicket.technician_name && <div className="flex justify-between"><span className="text-sm text-muted-foreground">Technicien actuel</span><span>{selectedTicket.technician_name}</span></div>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reason">Raison de l'escalade *</Label>
+                <Textarea id="reason" placeholder="Décrivez pourquoi ce ticket nécessite une escalade..." value={escalationReason} onChange={(e) => setEscalationReason(e.target.value)} rows={4} />
+              </div>
+              {selectedTicket.technician_name && (
+                <p className="text-sm text-muted-foreground flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Le technicien actuel sera archivé dans l'historique du ticket.</p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEscalateModal(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleEscalate} disabled={loading || !escalationReason.trim()}>{loading ? "Escalade..." : "Confirmer l'escalade"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <TicketDetailDialog ticket={detailTicket} open={showDetailModal} onOpenChange={setShowDetailModal} />
+    </div>
+  );
+};
 
 // Payments View
 const PaymentsView = () => (
