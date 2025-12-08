@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Hotel } from "lucide-react";
+import { Hotel, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import luxuryBg from "@/assets/luxury-hotel-bg.jpg";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -85,14 +86,27 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8">
+    <div className="min-h-screen relative flex items-center justify-center p-4">
+      {/* Background */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${luxuryBg})` }}
+      />
+      <div className="absolute inset-0 bg-primary/85" />
+      
+      {/* Card */}
+      <Card className="relative w-full max-w-md p-8 glass-luxury shadow-2xl">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <Hotel className="h-10 w-10 text-primary" />
-            <span className="text-3xl font-bold text-foreground">TicketHotel</span>
+            <span className="text-3xl font-serif font-bold text-foreground">TicketHotel</span>
           </div>
-          <h2 className="text-xl font-semibold text-card-foreground">Connexion</h2>
+          <div className="flex items-center gap-1 mb-4">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} className="h-4 w-4 fill-secondary text-secondary" />
+            ))}
+          </div>
+          <h2 className="text-xl font-serif font-semibold text-card-foreground">Connexion</h2>
           <p className="text-sm text-muted-foreground mt-1">Accédez à votre espace professionnel</p>
         </div>
 
@@ -105,6 +119,7 @@ const Login = () => {
               placeholder="votre@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="bg-background/50"
             />
           </div>
           <div>
@@ -115,6 +130,7 @@ const Login = () => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="bg-background/50"
             />
           </div>
 
@@ -132,21 +148,35 @@ const Login = () => {
                 Se souvenir de moi
               </label>
             </div>
-            <Button variant="link" className="px-0 text-sm">
+            <Button variant="link" className="px-0 text-sm text-secondary">
               Mot de passe oublié ?
             </Button>
           </div>
 
-          <Button onClick={handleLogin} className="w-full" disabled={!email || !password || loading}>
+          <Button 
+            onClick={handleLogin} 
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg" 
+            disabled={!email || !password || loading}
+          >
             {loading ? "Connexion..." : "Se connecter"}
           </Button>
 
           <div className="text-center space-y-2">
-            <Button type="button" variant="ghost" onClick={() => navigate("/signup")} className="text-sm">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => navigate("/signup")} 
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
               Créer un compte
             </Button>
             <br />
-            <Button type="button" variant="ghost" onClick={() => navigate("/")} className="text-sm">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => navigate("/")} 
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
               Retour à l'accueil
             </Button>
           </div>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Hotel } from "lucide-react";
+import { Hotel, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,10 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import luxuryBg from "@/assets/luxury-hotel-bg.jpg";
 
 type UserRole = "client" | "technician" | "admin" | "superadmin";
 
-interface Hotel {
+interface HotelData {
   id: string;
   name: string;
 }
@@ -26,7 +27,7 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [hotels, setHotels] = useState<HotelData[]>([]);
   
   const [formData, setFormData] = useState({
     email: "",
@@ -141,15 +142,28 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8">
+    <div className="min-h-screen relative flex items-center justify-center p-4">
+      {/* Background */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${luxuryBg})` }}
+      />
+      <div className="absolute inset-0 bg-primary/85" />
+      
+      {/* Card */}
+      <Card className="relative w-full max-w-md p-8 glass-luxury shadow-2xl">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-2">
             <Hotel className="h-10 w-10 text-primary" />
-            <span className="text-3xl font-bold text-foreground">TicketHotel</span>
+            <span className="text-3xl font-serif font-bold text-foreground">TicketHotel</span>
           </div>
-          <h2 className="text-xl font-semibold text-card-foreground">Créer un compte</h2>
-          <p className="text-sm text-muted-foreground mt-1">Rejoignez votre espace professionnel</p>
+          <div className="flex items-center gap-1 mb-4">
+            {[...Array(5)].map((_, i) => (
+              <Star key={i} className="h-4 w-4 fill-secondary text-secondary" />
+            ))}
+          </div>
+          <h2 className="text-xl font-serif font-semibold text-card-foreground">Créer un compte</h2>
+          <p className="text-sm text-muted-foreground mt-1">Rejoignez l'excellence hôtelière</p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
@@ -161,6 +175,7 @@ const Signup = () => {
               required
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              className="bg-background/50"
             />
           </div>
 
@@ -172,6 +187,7 @@ const Signup = () => {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="bg-background/50"
             />
           </div>
 
@@ -182,13 +198,14 @@ const Signup = () => {
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="bg-background/50"
             />
           </div>
 
           <div>
             <Label htmlFor="role">Rôle</Label>
             <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-background/50">
                 <SelectValue placeholder="Sélectionnez un rôle" />
               </SelectTrigger>
               <SelectContent>
@@ -204,7 +221,7 @@ const Signup = () => {
             <div>
               <Label htmlFor="hotel">Hôtel</Label>
               <Select value={formData.hotelId} onValueChange={(value) => setFormData({ ...formData, hotelId: value })}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Sélectionnez un hôtel" />
                 </SelectTrigger>
                 <SelectContent>
@@ -226,6 +243,7 @@ const Signup = () => {
               required
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="bg-background/50"
             />
           </div>
 
@@ -237,10 +255,15 @@ const Signup = () => {
               required
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              className="bg-background/50"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg" 
+            disabled={loading}
+          >
             {loading ? "Création..." : "Créer mon compte"}
           </Button>
 
@@ -249,7 +272,7 @@ const Signup = () => {
               type="button"
               variant="ghost"
               onClick={() => navigate("/login")}
-              className="text-sm"
+              className="text-sm text-muted-foreground hover:text-foreground"
             >
               Déjà un compte ? Se connecter
             </Button>
