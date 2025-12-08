@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Hotel, Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { PublicHeader } from "@/components/layout/PublicHeader";
+import { Search, Download, CheckCircle } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
@@ -13,12 +14,19 @@ import html2canvas from "html2canvas";
 
 const TrackTicket = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [email, setEmail] = useState("");
-  const [ticketNumber, setTicketNumber] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") || "");
+  const [ticketNumber, setTicketNumber] = useState(searchParams.get("ticket") || "");
   const [showTicket, setShowTicket] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ticket, setTicket] = useState<any>(null);
+
+  useEffect(() => {
+    if (searchParams.get("email") && searchParams.get("ticket")) {
+      handleSearch();
+    }
+  }, []);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -28,6 +36,7 @@ const TrackTicket = () => {
         .select(`
           *,
           categories (name, color, icon),
+          hotels (name),
           profiles!tickets_assigned_technician_id_fkey (full_name)
         `)
         .eq("client_email", email)
@@ -39,7 +48,7 @@ const TrackTicket = () => {
       if (!data) {
         toast({
           title: "Ticket non trouvé",
-          description: "Aucun ticket ne correspond à ces informations.",
+          description: "Aucun ticket ne correspond à ces informations. Vérifiez l'email et le numéro de ticket.",
           variant: "destructive",
         });
         return;
@@ -66,7 +75,7 @@ const TrackTicket = () => {
       const { error } = await supabase
         .from("tickets")
         .update({
-          status: "resolved",
+          status: "closed",
           resolved_at: new Date().toISOString(),
         })
         .eq("id", ticket.id);
@@ -75,10 +84,9 @@ const TrackTicket = () => {
 
       toast({
         title: "Ticket clôturé",
-        description: "Votre ticket a été clôturé avec succès.",
+        description: "Merci pour votre retour ! Votre ticket a été clôturé avec succès.",
       });
 
-      // Refresh ticket data
       handleSearch();
     } catch (error) {
       console.error("Error closing ticket:", error);
@@ -95,7 +103,7 @@ const TrackTicket = () => {
     if (!ticketElement) return;
 
     try {
-      const canvas = await html2canvas(ticketElement);
+      const canvas = await html2canvas(ticketElement, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF();
       const imgWidth = 190;
@@ -118,14 +126,34 @@ const TrackTicket = () => {
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "closed":
+        return <Badge className="bg-muted text-muted-foreground">Clôturé</Badge>;
+      case "resolved":
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">Résolu</Badge>;
+      case "in_progress":
+        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">En cours</Badge>;
+      case "pending":
+        return <Badge className="bg-orange-500/10 text-orange-500 border-orange-500/20">En attente</Badge>;
+      default:
+        return <Badge className="bg-primary/10 text-primary border-primary/20">Ouvert</Badge>;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "closed": return "Clôturé";
+      case "resolved": return "Résolu";
+      case "in_progress": return "En cours";
+      case "pending": return "En attente";
+      default: return "Ouvert";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background">
-      <nav className="border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-2">
-          <Hotel className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold text-foreground">TicketHotel</span>
-        </div>
-      </nav>
+      <PublicHeader showBackButton />
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card className="p-6 md:p-8">
@@ -170,18 +198,10 @@ const TrackTicket = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-card-foreground">Ticket {ticket.ticket_number}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Créé le {new Date(ticket.created_at).toLocaleDateString('fr-FR')}
+                      {ticket.hotels?.name} • Créé le {new Date(ticket.created_at).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
-                  <Badge className={
-                    ticket.status === 'resolved' 
-                      ? 'bg-green-500 text-white'
-                      : ticket.status === 'in_progress'
-                      ? 'bg-yellow-500 text-white'
-                      : 'bg-primary text-primary-foreground'
-                  }>
-                    {ticket.status === 'resolved' ? 'Résolu' : ticket.status === 'in_progress' ? 'En cours' : 'Ouvert'}
-                  </Badge>
+                  {getStatusBadge(ticket.status)}
                 </div>
 
                 <Card className="p-4 bg-accent border-border">
@@ -194,7 +214,7 @@ const TrackTicket = () => {
                 </Card>
 
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-card-foreground">Statut</h4>
+                  <h4 className="font-semibold text-card-foreground">Historique</h4>
                   <div className="space-y-3">
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
@@ -224,7 +244,7 @@ const TrackTicket = () => {
                       </div>
                     )}
                     
-                    {ticket.status === 'in_progress' && (
+                    {(ticket.status === 'in_progress' || ticket.status === 'resolved' || ticket.status === 'closed') && (
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
                           <div className="h-3 w-3 rounded-full bg-primary" />
@@ -238,11 +258,11 @@ const TrackTicket = () => {
                     
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className={`h-3 w-3 rounded-full ${ticket.status === 'resolved' ? 'bg-green-500' : 'bg-muted'}`} />
+                        <div className={`h-3 w-3 rounded-full ${ticket.status === 'resolved' || ticket.status === 'closed' ? 'bg-green-500' : 'bg-muted'}`} />
                       </div>
                       <div>
-                        <p className={`font-medium ${ticket.status === 'resolved' ? 'text-green-500' : 'text-muted-foreground'}`}>
-                          Résolu
+                        <p className={`font-medium ${ticket.status === 'resolved' || ticket.status === 'closed' ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {ticket.status === 'closed' ? 'Clôturé' : 'Résolu'}
                         </p>
                         {ticket.resolved_at && (
                           <p className="text-xs text-muted-foreground">
@@ -256,22 +276,27 @@ const TrackTicket = () => {
 
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={handleDownloadPDF}>
+                    <Download className="mr-2 h-4 w-4" />
                     Télécharger PDF
                   </Button>
-                  <Button 
-                    className="flex-1" 
-                    onClick={handleCloseTicket}
-                    disabled={ticket.status === 'resolved'}
-                  >
-                    {ticket.status === 'resolved' ? 'Ticket clôturé' : 'Clôturer mon ticket'}
-                  </Button>
+                  {ticket.status === 'resolved' && (
+                    <Button 
+                      className="flex-1" 
+                      onClick={handleCloseTicket}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Confirmer la résolution
+                    </Button>
+                  )}
+                  {ticket.status === 'closed' && (
+                    <Button className="flex-1" disabled>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Ticket clôturé
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
-
-            <Button variant="ghost" onClick={() => navigate("/")} className="w-full">
-              Retour à l'accueil
-            </Button>
           </div>
         </Card>
       </main>
