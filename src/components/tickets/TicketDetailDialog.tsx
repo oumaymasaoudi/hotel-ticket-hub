@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
+import { TicketComments } from "./TicketComments";
 import { 
   Clock, 
   User, 
@@ -15,10 +16,12 @@ import {
   Calendar,
   Mail,
   Phone,
-  Tag
+  Tag,
+  Download
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import jsPDF from "jspdf";
 
 interface TicketDetailDialogProps {
   ticket: any;
@@ -329,8 +332,61 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               </div>
             )}
           </Card>
+
+          {/* Commentaires */}
+          <Card className="p-4">
+            <TicketComments ticketId={ticket.id} />
+          </Card>
+
+          {/* Bouton Export PDF */}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => exportTicketPDF(ticket, history)}>
+              <Download className="h-4 w-4 mr-2" />
+              Télécharger PDF
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
+};
+
+const exportTicketPDF = (ticket: any, history: HistoryEntry[]) => {
+  const doc = new jsPDF();
+  let y = 20;
+
+  doc.setFontSize(18);
+  doc.text(`Ticket ${ticket.ticket_number}`, 20, y);
+  y += 15;
+
+  doc.setFontSize(12);
+  doc.text(`Statut: ${statusLabels[ticket.status] || ticket.status}`, 20, y);
+  y += 8;
+  doc.text(`Catégorie: ${ticket.categories?.name || "N/A"}`, 20, y);
+  y += 8;
+  doc.text(`Client: ${ticket.client_email}`, 20, y);
+  y += 8;
+  doc.text(`Créé le: ${format(new Date(ticket.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}`, 20, y);
+  y += 15;
+
+  doc.setFontSize(14);
+  doc.text("Description:", 20, y);
+  y += 8;
+  doc.setFontSize(11);
+  const descLines = doc.splitTextToSize(ticket.description || "", 170);
+  doc.text(descLines, 20, y);
+  y += descLines.length * 6 + 10;
+
+  doc.setFontSize(14);
+  doc.text("Historique:", 20, y);
+  y += 8;
+  doc.setFontSize(10);
+  history.forEach((h) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    const date = format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: fr });
+    doc.text(`${date} - ${actionLabels[h.action_type] || h.action_type}`, 20, y);
+    y += 6;
+  });
+
+  doc.save(`ticket-${ticket.ticket_number}.pdf`);
 };
