@@ -23,11 +23,19 @@ interface HotelData {
   name: string;
 }
 
+interface CategoryData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelData[]>([]);
+  const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     email: "",
@@ -41,6 +49,7 @@ const Signup = () => {
 
   useEffect(() => {
     fetchHotels();
+    fetchCategories();
   }, []);
 
   const fetchHotels = async () => {
@@ -52,6 +61,24 @@ const Signup = () => {
     if (!error && data) {
       setHotels(data);
     }
+  };
+
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name, color");
+
+    if (!error && data) {
+      setCategories(data);
+    }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -75,10 +102,19 @@ const Signup = () => {
       return;
     }
 
-    if (formData.role === "admin" && !formData.hotelId) {
+    if ((formData.role === "admin" || formData.role === "technician") && !formData.hotelId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un hôtel",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.role === "technician" && selectedCategories.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner au moins une spécialité",
         variant: "destructive",
       });
       return;
@@ -123,6 +159,16 @@ const Signup = () => {
 
         if (roleError) throw roleError;
 
+        // Insert technician categories if applicable
+        if (formData.role === "technician" && selectedCategories.length > 0) {
+          const categoryInserts = selectedCategories.map(categoryId => ({
+            technician_id: authData.user!.id,
+            category_id: categoryId,
+          }));
+
+          await supabase.from("technician_categories").insert(categoryInserts);
+        }
+
         toast({
           title: "Compte créé !",
           description: "Votre compte a été créé avec succès",
@@ -151,7 +197,7 @@ const Signup = () => {
       <div className="absolute inset-0 bg-primary/85" />
       
       {/* Card */}
-      <Card className="relative w-full max-w-md p-8 glass-luxury shadow-2xl">
+      <Card className="relative w-full max-w-md p-8 glass-luxury shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-2 mb-2">
             <Hotel className="h-10 w-10 text-primary" />
@@ -204,7 +250,7 @@ const Signup = () => {
 
           <div>
             <Label htmlFor="role">Rôle</Label>
-            <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}>
+            <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({ ...formData, role: value, hotelId: "" })}>
               <SelectTrigger className="bg-background/50">
                 <SelectValue placeholder="Sélectionnez un rôle" />
               </SelectTrigger>
@@ -216,7 +262,7 @@ const Signup = () => {
             </Select>
           </div>
 
-          {formData.role === "admin" && (
+          {(formData.role === "admin" || formData.role === "technician") && (
             <div>
               <Label htmlFor="hotel">Hôtel</Label>
               <Select value={formData.hotelId} onValueChange={(value) => setFormData({ ...formData, hotelId: value })}>
@@ -231,6 +277,37 @@ const Signup = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {formData.role === "technician" && (
+            <div>
+              <Label>Spécialités</Label>
+              <p className="text-xs text-muted-foreground mb-2">Sélectionnez vos domaines d'intervention</p>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md bg-background/50">
+                {categories.map((cat) => (
+                  <div
+                    key={cat.id}
+                    onClick={() => toggleCategory(cat.id)}
+                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${
+                      selectedCategories.includes(cat.id)
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:bg-accent"
+                    }`}
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    <span className="text-xs">{cat.name}</span>
+                  </div>
+                ))}
+              </div>
+              {selectedCategories.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedCategories.length} spécialité(s) sélectionnée(s)
+                </p>
+              )}
             </div>
           )}
 
