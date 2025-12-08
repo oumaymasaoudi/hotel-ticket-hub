@@ -131,6 +131,7 @@ const TicketsView = () => {
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTechId, setSelectedTechId] = useState("");
+  const [showOnlySpecialists, setShowOnlySpecialists] = useState(true);
 
   useEffect(() => { if (hotelId) fetchData(); }, [hotelId]);
 
@@ -138,18 +139,33 @@ const TicketsView = () => {
     // Tickets avec profil du technicien assigné via jointure
     const { data: t } = await supabase
       .from("tickets")
-      .select(`*, categories(name), profiles!tickets_assigned_technician_id_fkey(full_name)`)
+      .select(`*, categories(id, name), profiles!tickets_assigned_technician_id_fkey(full_name)`)
       .eq("hotel_id", hotelId)
       .order("created_at", { ascending: false });
     
-    // Tous les techniciens (travaillent sur tous les hôtels)
+    // Tous les techniciens avec leurs spécialités
     const { data: techData } = await supabase
       .from("user_roles")
       .select("user_id, profiles(id, full_name, phone)")
       .eq("role", "technician");
     
+    // Récupérer les catégories de chaque technicien
+    if (techData) {
+      const techsWithCategories = await Promise.all(
+        techData.map(async (tech) => {
+          const { data: techCats } = await supabase
+            .from("technician_categories")
+            .select("category_id")
+            .eq("technician_id", tech.user_id);
+          return { ...tech, categoryIds: techCats?.map(c => c.category_id) || [] };
+        })
+      );
+      setTechnicians(techsWithCategories);
+    } else {
+      setTechnicians([]);
+    }
+    
     setTickets(t || []);
-    setTechnicians(techData || []);
   };
 
   const handleAssign = async () => {
@@ -158,6 +174,7 @@ const TicketsView = () => {
     if (error) { toast({ title: "Erreur", variant: "destructive" }); return; }
     toast({ title: "Technicien assigné" });
     setShowAssignModal(false);
+    setSelectedTechId("");
     fetchData();
   };
 
@@ -168,6 +185,18 @@ const TicketsView = () => {
       default: return <Badge className="bg-primary/10 text-primary">Ouvert</Badge>;
     }
   };
+
+  // Filtrer les techniciens selon la catégorie du ticket
+  const getFilteredTechnicians = () => {
+    if (!selectedTicket || !showOnlySpecialists) return technicians;
+    const ticketCategoryId = selectedTicket.category_id;
+    return technicians.filter(t => t.categoryIds.includes(ticketCategoryId));
+  };
+
+  const filteredTechnicians = getFilteredTechnicians();
+  const specialistsCount = selectedTicket 
+    ? technicians.filter(t => t.categoryIds.includes(selectedTicket.category_id)).length 
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -185,7 +214,7 @@ const TicketsView = () => {
                 <TableCell>{getStatusBadge(t.status)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setSelectedTicket(t); setShowAssignModal(true); }}><UserPlus className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedTicket(t); setSelectedTechId(""); setShowAssignModal(true); }}><UserPlus className="h-4 w-4" /></Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -196,9 +225,54 @@ const TicketsView = () => {
 
       <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Assigner un technicien</DialogTitle></DialogHeader>
-          <div><Label>Technicien</Label><Select value={selectedTechId} onValueChange={setSelectedTechId}><SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger><SelectContent>{technicians.map((t) => (<SelectItem key={t.user_id} value={t.user_id}>{t.profiles?.full_name}</SelectItem>))}</SelectContent></Select></div>
-          <DialogFooter><Button variant="outline" onClick={() => setShowAssignModal(false)}>Annuler</Button><Button onClick={handleAssign}>Assigner</Button></DialogFooter>
+          <DialogHeader>
+            <DialogTitle>Assigner un technicien</DialogTitle>
+            {selectedTicket && (
+              <p className="text-sm text-muted-foreground">
+                Ticket {selectedTicket.ticket_number} - {selectedTicket.categories?.name}
+              </p>
+            )}
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Spécialistes uniquement</Label>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{specialistsCount} spécialiste{specialistsCount > 1 ? 's' : ''}</Badge>
+                <Button 
+                  variant={showOnlySpecialists ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setShowOnlySpecialists(!showOnlySpecialists)}
+                >
+                  {showOnlySpecialists ? "Filtré" : "Tous"}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label>Technicien</Label>
+              <Select value={selectedTechId} onValueChange={setSelectedTechId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredTechnicians.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      Aucun spécialiste disponible
+                    </div>
+                  ) : (
+                    filteredTechnicians.map((t) => (
+                      <SelectItem key={t.user_id} value={t.user_id}>
+                        {t.profiles?.full_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAssignModal(false)}>Annuler</Button>
+            <Button onClick={handleAssign} disabled={!selectedTechId}>Assigner</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
