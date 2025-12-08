@@ -4,7 +4,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
+import luxuryLightBg from "@/assets/luxury-hotel-light-bg.jpg";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -67,22 +68,40 @@ export function DashboardLayout({
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar role={role} />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-4">
-            <SidebarTrigger />
+        <div className="flex-1 flex flex-col relative">
+          {/* Background Image */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed opacity-20"
+            style={{ backgroundImage: `url(${luxuryLightBg})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/95" />
+          
+          {/* Content */}
+          <header className="relative h-16 border-b border-border/50 bg-card/80 backdrop-blur-sm flex items-center px-6 gap-4 shadow-sm">
+            <SidebarTrigger className="text-primary hover:bg-primary/10" />
             {showBackButton && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => (backUrl ? navigate(backUrl) : navigate(-1))}
+                className="text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Retour
               </Button>
             )}
-            {title && <h1 className="text-lg font-semibold text-foreground">{title}</h1>}
+            {title && (
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-serif font-semibold text-primary">{title}</h1>
+                <div className="flex items-center gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-3 w-3 fill-secondary text-secondary" />
+                  ))}
+                </div>
+              </div>
+            )}
           </header>
-          <main className="flex-1 p-6 bg-background overflow-auto">{children}</main>
+          <main className="relative flex-1 p-6 overflow-auto">{children}</main>
         </div>
       </div>
     </SidebarProvider>
