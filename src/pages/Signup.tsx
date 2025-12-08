@@ -212,7 +212,6 @@ const Signup = () => {
                 <SelectItem value="client">Client</SelectItem>
                 <SelectItem value="technician">Technicien</SelectItem>
                 <SelectItem value="admin">Admin Hôtel</SelectItem>
-                <SelectItem value="superadmin">SuperAdmin</SelectItem>
               </SelectContent>
             </Select>
           </div>
