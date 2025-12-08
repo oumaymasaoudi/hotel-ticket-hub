@@ -72,6 +72,7 @@ const adminMenuItems = [
 const superAdminMenuItems = [
   { title: "Tableau de bord", url: "/dashboard/superadmin", icon: BarChart3 },
   { title: "Hôtels", url: "/dashboard/superadmin/hotels", icon: Building2 },
+  { title: "Escalades", url: "/dashboard/superadmin/escalations", icon: AlertTriangle },
   { title: "Plans", url: "/dashboard/superadmin/plans", icon: Layers },
   { title: "Utilisateurs", url: "/dashboard/superadmin/users", icon: Users },
   { title: "Catégories", url: "/dashboard/superadmin/categories", icon: Wrench },
