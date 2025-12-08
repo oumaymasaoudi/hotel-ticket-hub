@@ -62,7 +62,6 @@ const technicianMenuItems = [
 const adminMenuItems = [
   { title: "Tableau de bord", url: "/dashboard/admin", icon: BarChart3 },
   { title: "Tickets", url: "/dashboard/admin/tickets", icon: TicketCheck },
-  { title: "Créer ticket", url: "/dashboard/admin/create-ticket", icon: Plus },
   { title: "Techniciens", url: "/dashboard/admin/technicians", icon: Users },
   { title: "Escalades", url: "/dashboard/admin/escalations", icon: AlertTriangle },
   { title: "Paiements", url: "/dashboard/admin/payments", icon: CreditCard },

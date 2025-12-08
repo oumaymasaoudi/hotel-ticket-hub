@@ -21,7 +21,6 @@ const AdminDashboard = () => {
 
   const getActiveView = () => {
     if (currentPath.includes("/tickets")) return "tickets";
-    if (currentPath.includes("/create-ticket")) return "create-ticket";
     if (currentPath.includes("/technicians")) return "technicians";
     if (currentPath.includes("/escalations")) return "escalations";
     if (currentPath.includes("/payments")) return "payments";
@@ -34,7 +33,6 @@ const AdminDashboard = () => {
   const titles: Record<string, string> = {
     dashboard: "Tableau de bord",
     tickets: "Gestion des tickets",
-    "create-ticket": "Créer un ticket",
     technicians: "Gestion des techniciens",
     escalations: "Escalades",
     payments: "Paiements",
@@ -46,7 +44,6 @@ const AdminDashboard = () => {
     <DashboardLayout allowedRoles={["admin"]} title={titles[activeView]}>
       {activeView === "dashboard" && <DashboardView />}
       {activeView === "tickets" && <TicketsView />}
-      {activeView === "create-ticket" && <CreateTicketView />}
       {activeView === "technicians" && <TechniciansView />}
       {activeView === "escalations" && <EscalationsView />}
       {activeView === "payments" && <PaymentsView />}
@@ -190,42 +187,6 @@ const TicketsView = () => {
         </DialogContent>
       </Dialog>
     </div>
-  );
-};
-
-// Create Ticket View
-const CreateTicketView = () => {
-  const { hotelId } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [description, setDescription] = useState("");
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => { supabase.from("categories").select("*").then(({ data }) => setCategories(data || [])); }, []);
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    const { data: ticketNumber } = await supabase.rpc("generate_ticket_number");
-    const { error } = await supabase.from("tickets").insert({ ticket_number: ticketNumber, client_email: email, client_phone: phone || null, hotel_id: hotelId, category_id: categoryId, description, status: "open" });
-    if (error) { toast({ title: "Erreur", variant: "destructive" }); setLoading(false); return; }
-    toast({ title: "Ticket créé", description: `Numéro: ${ticketNumber}` });
-    navigate("/dashboard/admin/tickets");
-  };
-
-  return (
-    <Card className="p-6 max-w-2xl">
-      <div className="space-y-4">
-        <div><Label>Email client</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@email.com" /></div>
-        <div><Label>Téléphone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+33..." /></div>
-        <div><Label>Catégorie</Label><Select value={categoryId} onValueChange={setCategoryId}><SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger><SelectContent>{categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}</SelectContent></Select></div>
-        <div><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} /></div>
-        <Button onClick={handleSubmit} disabled={!email || !categoryId || !description || loading}>{loading ? "Création..." : "Créer le ticket"}</Button>
-      </div>
-    </Card>
   );
 };
 
