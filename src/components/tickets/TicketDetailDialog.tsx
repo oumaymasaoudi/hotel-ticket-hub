@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { TicketComments } from "./TicketComments";
+import { TicketImageUpload } from "./TicketImageUpload";
 import { 
   Clock, 
   User, 
@@ -67,12 +68,24 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [technicianHistory, setTechnicianHistory] = useState<any[]>([]);
+  const [images, setImages] = useState<{ id: string; storage_path: string; file_name: string }[]>([]);
 
   useEffect(() => {
     if (open && ticket) {
       fetchHistory();
+      fetchImages();
     }
   }, [open, ticket]);
+
+  const fetchImages = async () => {
+    if (!ticket) return;
+    const { data } = await supabase
+      .from("ticket_images")
+      .select("*")
+      .eq("ticket_id", ticket.id)
+      .order("created_at", { ascending: true });
+    setImages(data || []);
+  };
 
   const fetchHistory = async () => {
     if (!ticket) return;
@@ -235,6 +248,13 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               <p className="text-sm text-muted-foreground mb-1">Description:</p>
               <p className="text-sm bg-accent/50 p-3 rounded-md">{ticket.description}</p>
             </div>
+
+            {/* Photos */}
+            {images.length > 0 && (
+              <div>
+                <TicketImageUpload ticketId={ticket.id} existingImages={images} readOnly />
+              </div>
+            )}
           </Card>
 
           {/* Technicien actuel */}
