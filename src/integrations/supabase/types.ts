@@ -168,6 +168,35 @@ export type Database = {
           },
         ]
       }
+      technician_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          technician_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          technician_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tickets: {
         Row: {
           assigned_technician_id: string | null
