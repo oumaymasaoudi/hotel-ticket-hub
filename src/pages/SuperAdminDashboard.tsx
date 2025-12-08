@@ -606,16 +606,8 @@ const PaymentsView = () => {
 };
 
 // Reports View
-const ReportsView = () => (
-  <div className="space-y-6">
-    <div className="grid md:grid-cols-2 gap-6">
-      <Card className="p-6"><h3 className="font-bold mb-4">Rapport mensuel</h3><p className="text-muted-foreground mb-4">Statistiques globales de la plateforme</p><Button>Télécharger PDF</Button></Card>
-      <Card className="p-6"><h3 className="font-bold mb-4">Rapport financier</h3><p className="text-muted-foreground mb-4">Revenus et paiements détaillés</p><Button>Télécharger Excel</Button></Card>
-      <Card className="p-6"><h3 className="font-bold mb-4">Rapport SLA</h3><p className="text-muted-foreground mb-4">Performance des interventions</p><Button>Télécharger PDF</Button></Card>
-      <Card className="p-6"><h3 className="font-bold mb-4">Rapport par hôtel</h3><p className="text-muted-foreground mb-4">Statistiques par établissement</p><Button>Télécharger PDF</Button></Card>
-    </div>
-  </div>
-);
+import SuperAdminReportsView from '@/components/reports/SuperAdminReportsView';
+const ReportsView = () => <SuperAdminReportsView />;
 
 // Logs View
 const LogsView = () => (
