@@ -166,7 +166,7 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
               {menuItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.title} className="px-2">
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
@@ -174,15 +174,71 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
                     >
                       <NavLink
                         to={item.url}
-                        className={`flex items-center gap-3 px-4 py-2.5 rounded-md transition-all ${
-                          isActive 
-                            ? "bg-sidebar-primary/20 text-sidebar-primary font-medium border-l-2 border-sidebar-primary" 
-                            : "text-white/80 hover:bg-white/10 hover:text-white"
-                        }`}
+                        className={`
+                          group relative flex items-center gap-3 px-4 py-3 rounded-lg
+                          transition-all duration-300 ease-out
+                          ${isActive 
+                            ? "bg-gradient-to-r from-sidebar-primary/30 to-sidebar-primary/10 text-sidebar-primary font-medium shadow-[0_0_20px_hsl(42_80%_52%/0.3)]" 
+                            : "text-white/70 hover:text-white"
+                          }
+                        `}
                         activeClassName=""
                       >
-                        <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-sidebar-primary" : ""}`} />
-                        <span>{item.title}</span>
+                        {/* Gold glow effect on hover */}
+                        <div className={`
+                          absolute inset-0 rounded-lg opacity-0 transition-opacity duration-300
+                          bg-gradient-to-r from-sidebar-primary/20 via-sidebar-primary/10 to-transparent
+                          group-hover:opacity-100
+                          ${isActive ? "opacity-100" : ""}
+                        `} />
+                        
+                        {/* Left border accent */}
+                        <div className={`
+                          absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-full
+                          transition-all duration-300 ease-out
+                          ${isActive 
+                            ? "h-8 bg-gradient-to-b from-sidebar-primary to-sidebar-primary/50 shadow-[0_0_10px_hsl(42_80%_52%/0.5)]" 
+                            : "h-0 bg-sidebar-primary group-hover:h-4"
+                          }
+                        `} />
+                        
+                        {/* Icon with glow */}
+                        <div className={`
+                          relative z-10 p-1.5 rounded-md transition-all duration-300
+                          ${isActive 
+                            ? "bg-sidebar-primary/20 shadow-[0_0_15px_hsl(42_80%_52%/0.4)]" 
+                            : "group-hover:bg-sidebar-primary/10 group-hover:shadow-[0_0_10px_hsl(42_80%_52%/0.2)]"
+                          }
+                        `}>
+                          <item.icon className={`
+                            h-4 w-4 transition-all duration-300
+                            ${isActive 
+                              ? "text-sidebar-primary" 
+                              : "text-white/60 group-hover:text-sidebar-primary"
+                            }
+                          `} />
+                        </div>
+                        
+                        {/* Text */}
+                        <span className={`
+                          relative z-10 text-sm transition-all duration-300
+                          ${isActive 
+                            ? "text-sidebar-primary font-semibold" 
+                            : "group-hover:text-white group-hover:translate-x-1"
+                          }
+                        `}>
+                          {item.title}
+                        </span>
+                        
+                        {/* Shine effect on hover */}
+                        <div className="absolute inset-0 rounded-lg overflow-hidden">
+                          <div className="
+                            absolute -inset-full top-0 h-full w-1/2 
+                            bg-gradient-to-r from-transparent via-white/5 to-transparent
+                            skew-x-12 transition-all duration-700 ease-out
+                            group-hover:translate-x-[200%]
+                          " />
+                        </div>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
