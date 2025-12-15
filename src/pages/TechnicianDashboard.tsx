@@ -1,201 +1,291 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, AlertCircle, Clock, TrendingUp, Eye, Play, History } from "lucide-react";
-import { useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/hooks/useAuth";
+import { apiService, TicketResponse } from "@/services/apiService";
+import { RefreshCw, Wrench, CheckCircle, Clock, Search, AlertTriangle, History } from "lucide-react";
+
+type StatusKey = TicketResponse["status"];
+
+const statusLabels: Record<StatusKey, string> = {
+    OPEN: "Ouvert",
+    IN_PROGRESS: "En cours",
+    PENDING: "En attente",
+    RESOLVED: "Résolu",
+    CLOSED: "Clôturé",
+};
+
+const statusVariants: Record<StatusKey, "default" | "secondary" | "destructive" | "outline"> = {
+    OPEN: "outline",
+    IN_PROGRESS: "secondary",
+    PENDING: "outline",
+    RESOLVED: "default",
+    CLOSED: "default",
+};
 
 const TechnicianDashboard = () => {
-  const location = useLocation();
-  const currentPath = location.pathname;
+    const { user, loading: authLoading } = useAuth();
+    const { toast } = useToast();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [tickets, setTickets] = useState<TicketResponse[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [filter, setFilter] = useState("");
+    const [updating, setUpdating] = useState<string | null>(null);
 
-  const getActiveView = () => {
-    if (currentPath.includes("/tickets")) return "tickets";
-    if (currentPath.includes("/urgent")) return "urgent";
-    if (currentPath.includes("/history")) return "history";
-    return "dashboard";
-  };
+    // ✅ Détecter la route active pour afficher le bon contenu
+    const currentView = useMemo(() => {
+        const path = location.pathname;
+        if (path.includes('/tickets')) return 'tickets';
+        if (path.includes('/urgent')) return 'urgent';
+        if (path.includes('/history')) return 'history';
+        return 'dashboard'; // Par défaut, afficher le tableau de bord
+    }, [location.pathname]);
 
-  const activeView = getActiveView();
-  const titles: Record<string, string> = {
-    dashboard: "Tableau de bord",
-    tickets: "Tickets assignés",
-    urgent: "Tickets urgents",
-    history: "Historique",
-  };
+    const fetchTickets = useCallback(async (technicianId: string) => {
+        setLoading(true);
+        try {
+            const data = await apiService.getTicketsByTechnician(technicianId);
+            setTickets(data);
+        } catch (error: any) {
+            const errorMessage = error.message || "Impossible de récupérer vos tickets";
 
-  return (
-    <DashboardLayout allowedRoles={["technician"]} title={titles[activeView]}>
-      {activeView === "dashboard" && <DashboardView />}
-      {activeView === "tickets" && <TicketsView />}
-      {activeView === "urgent" && <UrgentView />}
-      {activeView === "history" && <HistoryView />}
-    </DashboardLayout>
-  );
+            toast({
+                title: "Erreur",
+                description: errorMessage,
+                variant: "destructive",
+            });
+
+            // Rediriger vers login si session expirée
+            if (errorMessage.includes("Session expirée")) {
+                setTimeout(() => navigate("/login"), 2000);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [toast, navigate]);
+
+    useEffect(() => {
+        if (!authLoading) {
+            if (!user?.userId) {
+                // Pas connecté, rediriger vers login
+                navigate("/login");
+            } else {
+                fetchTickets(user.userId);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, user?.userId]);
+
+    const filteredTickets = useMemo(() => {
+        let filtered = tickets;
+
+        // ✅ Filtrer selon la vue active
+        if (currentView === 'urgent') {
+            filtered = filtered.filter(t => t.isUrgent);
+        } else if (currentView === 'history') {
+            filtered = filtered.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
+        } else if (currentView === 'tickets') {
+            // Afficher tous les tickets assignés
+            filtered = filtered;
+        }
+
+        // ✅ Appliquer le filtre de recherche
+        if (filter.trim()) {
+            const f = filter.toLowerCase();
+            filtered = filtered.filter(
+                (t) =>
+                    t.ticketNumber.toLowerCase().includes(f) ||
+                    t.status.toLowerCase().includes(f) ||
+                    t.categoryName.toLowerCase().includes(f) ||
+                    (t.description || "").toLowerCase().includes(f)
+            );
+        }
+
+        return filtered;
+    }, [tickets, filter, currentView]);
+
+    const stats = useMemo(() => {
+        const initial: Record<StatusKey, number> = {
+            OPEN: 0,
+            IN_PROGRESS: 0,
+            PENDING: 0,
+            RESOLVED: 0,
+            CLOSED: 0,
+        };
+        return tickets.reduce((acc, t) => {
+            acc[t.status] = (acc[t.status] || 0) + 1;
+            return acc;
+        }, initial);
+    }, [tickets]);
+
+    const updateStatus = async (ticket: TicketResponse, nextStatus: StatusKey) => {
+        if (!user?.userId) return;
+        setUpdating(ticket.id);
+        try {
+            await apiService.updateTicketStatus(ticket.id, nextStatus, user.userId, user.userId);
+            setTickets((prev) =>
+                prev.map((t) => (t.id === ticket.id ? { ...t, status: nextStatus } : t))
+            );
+            toast({ title: "Statut mis à jour", description: `${statusLabels[nextStatus]}` });
+        } catch (error: any) {
+            toast({
+                title: "Erreur",
+                description: error.message || "Impossible de mettre à jour le statut",
+                variant: "destructive",
+            });
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    // ✅ Titre et description selon la vue
+    const getViewTitle = () => {
+        switch (currentView) {
+            case 'tickets':
+                return 'Tickets assignés';
+            case 'urgent':
+                return 'Tickets urgents';
+            case 'history':
+                return 'Historique';
+            default:
+                return 'Tableau de bord Technicien';
+        }
+    };
+
+    return (
+        <DashboardLayout allowedRoles={["technician"]} title={getViewTitle()}>
+            <div className="space-y-6">
+                {/* Stats - Afficher seulement sur le tableau de bord */}
+                {currentView === 'dashboard' && (
+                    <div className="grid gap-4 md:grid-cols-4">
+                        <StatCard title="Total" value={tickets.length} />
+                        <StatCard title="En cours" value={(stats.IN_PROGRESS ?? 0) + (stats.PENDING ?? 0)} />
+                        <StatCard title="Ouverts" value={stats.OPEN ?? 0} />
+                        <StatCard title="Résolus" value={stats.RESOLVED ?? 0} />
+                    </div>
+                )}
+
+                {/* Actions */}
+                <Card className="p-4 flex flex-col gap-4 md:flex-row md:items-end">
+                    <div className="flex-1">
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Filtrer par numéro / statut / catégorie / description</p>
+                        <div className="flex gap-2">
+                            <Input
+                                placeholder="ex: TK-1234 ou 'en cours' ou 'électricité'"
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                            />
+                            <Button variant="outline" onClick={() => setFilter("")}>Réinitialiser</Button>
+                        </div>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => user?.userId && fetchTickets(user.userId)}
+                        disabled={loading}
+                    >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Rafraîchir
+                    </Button>
+                </Card>
+
+                {/* Liste */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            {currentView === 'urgent' && <AlertTriangle className="h-5 w-5 text-destructive" />}
+                            {currentView === 'history' && <History className="h-5 w-5 text-muted-foreground" />}
+                            <CardTitle>
+                                {currentView === 'tickets' && 'Tickets assignés'}
+                                {currentView === 'urgent' && 'Tickets urgents'}
+                                {currentView === 'history' && 'Historique des tickets'}
+                                {currentView === 'dashboard' && 'Tickets assignés'}
+                                {' '}({filteredTickets.length})
+                            </CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {loading ? (
+                            <p className="text-sm text-muted-foreground">Chargement...</p>
+                        ) : filteredTickets.length === 0 ? (
+                            <div className="text-center py-8">
+                                <p className="text-sm text-muted-foreground">
+                                    {currentView === 'urgent' && "Aucun ticket urgent."}
+                                    {currentView === 'history' && "Aucun ticket dans l'historique."}
+                                    {currentView === 'tickets' && "Aucun ticket assigné."}
+                                    {currentView === 'dashboard' && "Aucun ticket."}
+                                </p>
+                            </div>
+                        ) : (
+                            filteredTickets.map((t) => (
+                                <div key={t.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 p-3 rounded-md border bg-muted/40">
+                                    <div>
+                                        <p className="font-semibold text-card-foreground">{t.ticketNumber}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {t.categoryName} • {t.hotelName}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">Créé le {new Date(t.createdAt).toLocaleDateString("fr-FR")}</p>
+                                        {t.resolvedAt && (
+                                            <p className="text-xs text-muted-foreground">Résolu le {new Date(t.resolvedAt).toLocaleDateString("fr-FR")}</p>
+                                        )}
+                                        <p className="text-xs text-muted-foreground truncate max-w-xl">{t.description}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <Badge variant={statusVariants[t.status] || "outline"} className="capitalize">
+                                            {statusLabels[t.status] || t.status}
+                                        </Badge>
+                                        {t.isUrgent && <Badge variant="destructive">Urgent</Badge>}
+                                        {t.status === "OPEN" || t.status === "PENDING" ? (
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                onClick={() => updateStatus(t, "IN_PROGRESS")}
+                                                disabled={updating === t.id}
+                                            >
+                                                <Wrench className="h-4 w-4 mr-1" />
+                                                En cours
+                                            </Button>
+                                        ) : null}
+                                        {t.status === "IN_PROGRESS" ? (
+                                            <Button
+                                                size="sm"
+                                                variant="default"
+                                                onClick={() => updateStatus(t, "RESOLVED")}
+                                                disabled={updating === t.id}
+                                            >
+                                                <CheckCircle className="h-4 w-4 mr-1" />
+                                                Marquer résolu
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </DashboardLayout>
+    );
 };
 
-// Dashboard View
-const DashboardView = () => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [stats, setStats] = useState({ assigned: 0, urgent: 0, slaExceeded: 0, resolved: 0 });
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [newStatus, setNewStatus] = useState("");
-  const [updating, setUpdating] = useState(false);
-
-  useEffect(() => { if (user?.id) fetchTickets(); }, [user]);
-
-  const fetchTickets = async () => {
-    const { data } = await supabase.from("tickets").select(`*, categories(name, color), hotels(name)`).eq("assigned_technician_id", user?.id).order("created_at", { ascending: false });
-    setTickets(data || []);
-    const active = data?.filter(t => t.status !== "resolved" && t.status !== "closed") || [];
-    setStats({
-      assigned: active.length,
-      urgent: active.filter(t => t.is_urgent).length,
-      slaExceeded: active.filter(t => t.sla_deadline && new Date(t.sla_deadline) < new Date()).length,
-      resolved: data?.filter(t => t.status === "resolved" || t.status === "closed").length || 0,
-    });
-  };
-
-  const handleUpdateStatus = async () => {
-    if (!selectedTicket || !newStatus) return;
-    setUpdating(true);
-    const updateData: any = { status: newStatus };
-    if (newStatus === "resolved") updateData.resolved_at = new Date().toISOString();
-    const { error } = await supabase.from("tickets").update(updateData).eq("id", selectedTicket.id);
-    if (error) { toast({ title: "Erreur", variant: "destructive" }); } else { toast({ title: "Statut mis à jour" }); }
-    setShowStatusModal(false);
-    setUpdating(false);
-    fetchTickets();
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "resolved": return <Badge className="bg-green-500/10 text-green-500">Résolu</Badge>;
-      case "in_progress": return <Badge className="bg-yellow-500/10 text-yellow-500">En cours</Badge>;
-      case "pending": return <Badge className="bg-orange-500/10 text-orange-500">En attente</Badge>;
-      default: return <Badge className="bg-primary/10 text-primary">Ouvert</Badge>;
-    }
-  };
-
-  const activeTickets = tickets.filter(t => t.status !== "resolved" && t.status !== "closed");
-
-  return (
-    <div className="space-y-6">
-      <div className="grid md:grid-cols-4 gap-6">
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center"><Wrench className="h-6 w-6 text-primary" /></div><span className="text-3xl font-bold">{stats.assigned}</span></div><h3 className="font-semibold">Tickets assignés</h3></Card>
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center"><AlertCircle className="h-6 w-6 text-destructive" /></div><span className="text-3xl font-bold">{stats.urgent}</span></div><h3 className="font-semibold">Urgents</h3></Card>
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-orange-500/10 rounded-full flex items-center justify-center"><Clock className="h-6 w-6 text-orange-500" /></div><span className="text-3xl font-bold">{stats.slaExceeded}</span></div><h3 className="font-semibold">SLA dépassés</h3></Card>
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-green-500/10 rounded-full flex items-center justify-center"><TrendingUp className="h-6 w-6 text-green-500" /></div><span className="text-3xl font-bold">{stats.resolved}</span></div><h3 className="font-semibold">Résolus</h3></Card>
-      </div>
-
-      <h2 className="text-xl font-bold">Tickets actifs</h2>
-      <Card>
-        <Table>
-          <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Catégorie</TableHead><TableHead>Hôtel</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {activeTickets.map((t) => (
-              <TableRow key={t.id} className={t.is_urgent ? "bg-destructive/5" : ""}>
-                <TableCell className="font-medium"><div className="flex items-center gap-2">{t.ticket_number}{t.is_urgent && <Badge variant="destructive" className="text-xs">Urgent</Badge>}</div></TableCell>
-                <TableCell>{t.categories?.name}</TableCell>
-                <TableCell>{t.hotels?.name}</TableCell>
-                <TableCell>{getStatusBadge(t.status)}</TableCell>
-                <TableCell>
-                  <Button size="sm" onClick={() => { setSelectedTicket(t); setNewStatus(t.status); setShowStatusModal(true); }}><Play className="h-4 w-4 mr-1" />Gérer</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
-
-      <Dialog open={showStatusModal} onOpenChange={setShowStatusModal}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Mettre à jour - {selectedTicket?.ticket_number}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div><Label>Description</Label><p className="text-sm bg-muted p-3 rounded mt-1">{selectedTicket?.description}</p></div>
-            <div><Label>Nouveau statut</Label><Select value={newStatus} onValueChange={setNewStatus}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="open">Ouvert</SelectItem><SelectItem value="in_progress">En cours</SelectItem><SelectItem value="pending">En attente</SelectItem><SelectItem value="resolved">Résolu</SelectItem></SelectContent></Select></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setShowStatusModal(false)}>Annuler</Button><Button onClick={handleUpdateStatus} disabled={updating}>{updating ? "..." : "Mettre à jour"}</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-// Tickets View (all assigned)
-const TicketsView = () => {
-  const { user } = useAuth();
-  const [tickets, setTickets] = useState<any[]>([]);
-  useEffect(() => { if (user?.id) supabase.from("tickets").select(`*, categories(name), hotels(name)`).eq("assigned_technician_id", user?.id).neq("status", "closed").order("created_at", { ascending: false }).then(({ data }) => setTickets(data || [])); }, [user]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) { case "resolved": return <Badge className="bg-green-500/10 text-green-500">Résolu</Badge>; case "in_progress": return <Badge className="bg-yellow-500/10 text-yellow-500">En cours</Badge>; default: return <Badge className="bg-primary/10 text-primary">Ouvert</Badge>; }
-  };
-
-  return (
-    <Card>
-      <Table>
-        <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Catégorie</TableHead><TableHead>Hôtel</TableHead><TableHead>Date</TableHead><TableHead>Statut</TableHead></TableRow></TableHeader>
-        <TableBody>
-          {tickets.map((t) => (<TableRow key={t.id}><TableCell>{t.ticket_number}</TableCell><TableCell>{t.categories?.name}</TableCell><TableCell>{t.hotels?.name}</TableCell><TableCell>{new Date(t.created_at).toLocaleDateString('fr-FR')}</TableCell><TableCell>{getStatusBadge(t.status)}</TableCell></TableRow>))}
-        </TableBody>
-      </Table>
+const StatCard = ({ title, value }: { title: string; value: number }) => (
+    <Card className="p-4">
+        <div className="flex items-center justify-between">
+            <div>
+                <p className="text-sm text-muted-foreground">{title}</p>
+                <p className="text-2xl font-semibold text-card-foreground">{value}</p>
+            </div>
+            <div className="p-2 rounded-full bg-primary/10">
+                <Clock className="h-5 w-5 text-primary" />
+            </div>
+        </div>
     </Card>
-  );
-};
-
-// Urgent View
-const UrgentView = () => {
-  const { user } = useAuth();
-  const [tickets, setTickets] = useState<any[]>([]);
-  useEffect(() => { if (user?.id) supabase.from("tickets").select(`*, categories(name), hotels(name)`).eq("assigned_technician_id", user?.id).eq("is_urgent", true).neq("status", "resolved").neq("status", "closed").then(({ data }) => setTickets(data || [])); }, [user]);
-
-  return (
-    <div>
-      {tickets.length === 0 ? (
-        <Card className="p-8 text-center"><AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">Aucun ticket urgent</p></Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Catégorie</TableHead><TableHead>Hôtel</TableHead><TableHead>Description</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {tickets.map((t) => (<TableRow key={t.id} className="bg-destructive/5"><TableCell className="font-bold">{t.ticket_number}</TableCell><TableCell>{t.categories?.name}</TableCell><TableCell>{t.hotels?.name}</TableCell><TableCell className="max-w-xs truncate">{t.description}</TableCell></TableRow>))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-    </div>
-  );
-};
-
-// History View
-const HistoryView = () => {
-  const { user } = useAuth();
-  const [tickets, setTickets] = useState<any[]>([]);
-  useEffect(() => { if (user?.id) supabase.from("tickets").select(`*, categories(name), hotels(name)`).eq("assigned_technician_id", user?.id).in("status", ["resolved", "closed"]).order("resolved_at", { ascending: false }).then(({ data }) => setTickets(data || [])); }, [user]);
-
-  return (
-    <Card>
-      <Table>
-        <TableHeader><TableRow><TableHead>Ticket</TableHead><TableHead>Catégorie</TableHead><TableHead>Hôtel</TableHead><TableHead>Résolu le</TableHead></TableRow></TableHeader>
-        <TableBody>
-          {tickets.map((t) => (<TableRow key={t.id}><TableCell>{t.ticket_number}</TableCell><TableCell>{t.categories?.name}</TableCell><TableCell>{t.hotels?.name}</TableCell><TableCell>{t.resolved_at ? new Date(t.resolved_at).toLocaleDateString('fr-FR') : "N/A"}</TableCell></TableRow>))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-};
+);
 
 export default TechnicianDashboard;
+

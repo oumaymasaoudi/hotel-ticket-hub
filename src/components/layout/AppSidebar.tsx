@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/hooks/useAuth";
 import {
   Hotel,
@@ -47,9 +46,8 @@ interface AppSidebarProps {
 
 const clientMenuItems = [
   { title: "Tableau de bord", url: "/dashboard/client", icon: BarChart3 },
-  { title: "Nouveau ticket", url: "/dashboard/client/create", icon: Plus },
-  { title: "Mes tickets", url: "/dashboard/client/tickets", icon: TicketCheck },
-  { title: "Historique", url: "/dashboard/client/history", icon: History },
+  { title: "Nouveau ticket", url: "/create-ticket", icon: Plus },
+  { title: "Suivre un ticket", url: "/track-ticket", icon: TicketCheck },
 ];
 
 const technicianMenuItems = [
@@ -121,19 +119,20 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
   const badge = getRoleBadge(role);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_data");
+    navigate("/login");
   };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border overflow-hidden">
       {/* Background Image */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${sidebarBg})` }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-sidebar/80 via-sidebar/70 to-sidebar/90" />
-      
+
       {/* Content */}
       <SidebarHeader className="relative border-b border-white/10 p-4">
         <div className="flex items-center gap-2">
@@ -177,8 +176,8 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
                         className={`
                           group relative flex items-center gap-3 px-4 py-3 rounded-lg
                           transition-all duration-300 ease-out
-                          ${isActive 
-                            ? "bg-gradient-to-r from-sidebar-primary/30 to-sidebar-primary/10 text-sidebar-primary font-medium shadow-[0_0_20px_hsl(42_80%_52%/0.3)]" 
+                          ${isActive
+                            ? "bg-gradient-to-r from-sidebar-primary/30 to-sidebar-primary/10 text-sidebar-primary font-medium shadow-[0_0_20px_hsl(42_80%_52%/0.3)]"
                             : "text-white/70 hover:text-white"
                           }
                         `}
@@ -191,45 +190,45 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
                           group-hover:opacity-100
                           ${isActive ? "opacity-100" : ""}
                         `} />
-                        
+
                         {/* Left border accent */}
                         <div className={`
                           absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-full
                           transition-all duration-300 ease-out
-                          ${isActive 
-                            ? "h-8 bg-gradient-to-b from-sidebar-primary to-sidebar-primary/50 shadow-[0_0_10px_hsl(42_80%_52%/0.5)]" 
+                          ${isActive
+                            ? "h-8 bg-gradient-to-b from-sidebar-primary to-sidebar-primary/50 shadow-[0_0_10px_hsl(42_80%_52%/0.5)]"
                             : "h-0 bg-sidebar-primary group-hover:h-4"
                           }
                         `} />
-                        
+
                         {/* Icon with glow */}
                         <div className={`
                           relative z-10 p-1.5 rounded-md transition-all duration-300
-                          ${isActive 
-                            ? "bg-sidebar-primary/20 shadow-[0_0_15px_hsl(42_80%_52%/0.4)]" 
+                          ${isActive
+                            ? "bg-sidebar-primary/20 shadow-[0_0_15px_hsl(42_80%_52%/0.4)]"
                             : "group-hover:bg-sidebar-primary/10 group-hover:shadow-[0_0_10px_hsl(42_80%_52%/0.2)]"
                           }
                         `}>
                           <item.icon className={`
                             h-4 w-4 transition-all duration-300
-                            ${isActive 
-                              ? "text-sidebar-primary" 
+                            ${isActive
+                              ? "text-sidebar-primary"
                               : "text-white/60 group-hover:text-sidebar-primary"
                             }
                           `} />
                         </div>
-                        
+
                         {/* Text */}
                         <span className={`
                           relative z-10 text-sm transition-all duration-300
-                          ${isActive 
-                            ? "text-sidebar-primary font-semibold" 
+                          ${isActive
+                            ? "text-sidebar-primary font-semibold"
                             : "group-hover:text-white group-hover:translate-x-1"
                           }
                         `}>
                           {item.title}
                         </span>
-                        
+
                         {/* Shine effect on hover */}
                         <div className="absolute inset-0 rounded-lg overflow-hidden">
                           <div className="

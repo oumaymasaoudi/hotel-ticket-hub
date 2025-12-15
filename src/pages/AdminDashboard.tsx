@@ -1,1069 +1,2061 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { TicketCheck, AlertTriangle, Users, CreditCard, Plus, Edit, Trash2, Eye, Search, UserPlus, ArrowUpCircle, Clock } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/hooks/useAuth";
+import { apiService, TicketResponse, Hotel } from "@/services/apiService";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/PaginationControls";
+import { generateMonthlyReportPDF, generatePerformanceReportCSV } from "@/utils/exportUtils";
+import { AdvancedFilters, FilterState } from "@/components/AdvancedFilters";
+import {
+    RefreshCw,
+    Search,
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    Wrench,
+    TrendingUp,
+    Users,
+    DollarSign,
+    FileText,
+    Settings,
+    Eye,
+    UserPlus,
+    ArrowUp,
+    Download,
+    Edit,
+    Trash2,
+    CreditCard,
+    Star,
+    Crown,
+    Zap,
+    ChevronDown
+} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+
+type StatusKey = TicketResponse["status"];
+
+const statusLabels: Record<StatusKey, string> = {
+    OPEN: "Ouvert",
+    IN_PROGRESS: "En cours",
+    PENDING: "En attente",
+    RESOLVED: "Résolu",
+    CLOSED: "Clôturé",
+    ESCALATED: "Escaladé",
+};
+
+const statusVariants: Record<StatusKey, "default" | "secondary" | "destructive" | "outline"> = {
+    OPEN: "destructive",
+    IN_PROGRESS: "secondary",
+    PENDING: "outline",
+    RESOLVED: "default",
+    CLOSED: "default",
+    ESCALATED: "destructive",
+};
 
 const AdminDashboard = () => {
-  const location = useLocation();
-  const currentPath = location.pathname;
-
-  const getActiveView = () => {
-    if (currentPath.includes("/tickets")) return "tickets";
-    if (currentPath.includes("/technicians")) return "technicians";
-    if (currentPath.includes("/escalations")) return "escalations";
-    if (currentPath.includes("/payments")) return "payments";
-    if (currentPath.includes("/reports")) return "reports";
-    if (currentPath.includes("/settings")) return "settings";
-    return "dashboard";
-  };
-
-  const activeView = getActiveView();
-  const titles: Record<string, string> = {
-    dashboard: "Tableau de bord",
-    tickets: "Gestion des tickets",
-    technicians: "Gestion des techniciens",
-    escalations: "Escalades",
-    payments: "Paiements",
-    reports: "Rapports",
-    settings: "Paramètres",
-  };
-
-  return (
-    <DashboardLayout allowedRoles={["admin"]} title={titles[activeView]}>
-      {activeView === "dashboard" && <DashboardView />}
-      {activeView === "tickets" && <TicketsView />}
-      {activeView === "technicians" && <TechniciansView />}
-      {activeView === "escalations" && <EscalationsView />}
-      {activeView === "payments" && <PaymentsView />}
-      {activeView === "reports" && <ReportsView />}
-      {activeView === "settings" && <SettingsView />}
-    </DashboardLayout>
-  );
-};
-
-// Dashboard View
-import AdminDashboardCharts from '@/components/dashboard/AdminDashboardCharts';
-
-const DashboardView = () => {
-  const { hotelId } = useAuth();
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [technicians, setTechnicians] = useState<any[]>([]);
-  const [stats, setStats] = useState({ open: 0, escalated: 0, technicians: 0, resolved: 0 });
-
-  useEffect(() => {
-    if (hotelId) fetchData();
-  }, [hotelId]);
-
-  const fetchData = async () => {
-    const { data: ticketsData } = await supabase.from("tickets").select(`*, categories (name)`).eq("hotel_id", hotelId).order("created_at", { ascending: false });
-    
-    const { data: techData } = await supabase
-      .from("user_roles")
-      .select("user_id, profiles(id, full_name)")
-      .eq("role", "technician");
-    
-    const recentTickets = ticketsData?.slice(0, 5) || [];
-    setTickets(recentTickets);
-    setTechnicians(techData || []);
-    setStats({ 
-      open: ticketsData?.filter(t => t.status === "open").length || 0, 
-      escalated: ticketsData?.filter(t => t.status === "pending" && !t.assigned_technician_id).length || 0, 
-      technicians: techData?.length || 0,
-      resolved: ticketsData?.filter(t => t.status === "resolved" || t.status === "closed").length || 0
+    const { user, hotelId, loading: authLoading } = useAuth();
+    const { toast } = useToast();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [tickets, setTickets] = useState<TicketResponse[]>([]);
+    const [hotel, setHotel] = useState<Hotel | null>(null);
+    const [technicians, setTechnicians] = useState<any[]>([]);
+    const [plans, setPlans] = useState<any[]>([]);
+    const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+    const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+    const [loadingSubscription, setLoadingSubscription] = useState(false);
+    const [filter, setFilter] = useState("");
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [selectedTicket, setSelectedTicket] = useState<TicketResponse | null>(null);
+    const [assigning, setAssigning] = useState(false);
+    const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+    const [specialtySearch, setSpecialtySearch] = useState("");
+    const [addTechnicianDialogOpen, setAddTechnicianDialogOpen] = useState(false);
+    const [creatingTechnician, setCreatingTechnician] = useState(false);
+    const [newTechnician, setNewTechnician] = useState({
+        email: "",
+        password: "",
+        fullName: "",
+        phone: "",
     });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "resolved": return <Badge className="bg-green-500/10 text-green-500">Résolu</Badge>;
-      case "in_progress": return <Badge className="bg-yellow-500/10 text-yellow-500">En cours</Badge>;
-      case "pending": return <Badge className="bg-orange-500/10 text-orange-500">En attente</Badge>;
-      case "closed": return <Badge className="bg-muted text-muted-foreground">Fermé</Badge>;
-      default: return <Badge className="bg-primary/10 text-primary">Ouvert</Badge>;
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="grid md:grid-cols-4 gap-6">
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center"><TicketCheck className="h-6 w-6 text-primary" /></div><span className="text-3xl font-bold">{stats.open}</span></div><h3 className="font-semibold">Tickets ouverts</h3></Card>
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-green-500/10 rounded-full flex items-center justify-center"><TicketCheck className="h-6 w-6 text-green-500" /></div><span className="text-3xl font-bold">{stats.resolved}</span></div><h3 className="font-semibold">Résolus</h3></Card>
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center"><AlertTriangle className="h-6 w-6 text-destructive" /></div><span className="text-3xl font-bold">{stats.escalated}</span></div><h3 className="font-semibold">Escaladés</h3></Card>
-        <Card className="p-6"><div className="flex items-center justify-between mb-4"><div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center"><Users className="h-6 w-6 text-primary" /></div><span className="text-3xl font-bold">{stats.technicians}</span></div><h3 className="font-semibold">Techniciens</h3></Card>
-      </div>
-
-      <AdminDashboardCharts />
-
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Tickets récents</h2>
-          <div className="space-y-3">
-            {tickets.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucun ticket récent</p>
-            ) : tickets.map((ticket) => (
-              <div key={ticket.id} className="flex items-center justify-between p-3 bg-accent rounded-lg">
-                <div><p className="font-medium">{ticket.ticket_number}</p><p className="text-sm text-muted-foreground">{ticket.categories?.name}</p></div>
-                {getStatusBadge(ticket.status)}
-              </div>
-            ))}
-          </div>
-        </Card>
-        <Card className="p-6">
-          <h2 className="text-xl font-bold mb-4">Techniciens</h2>
-          <div className="space-y-3">
-            {technicians.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Aucun technicien</p>
-            ) : technicians.map((tech, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-accent rounded-lg">
-                <div className="flex items-center gap-3"><div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"><Users className="h-5 w-5 text-primary" /></div><p className="font-medium">{tech.profiles?.full_name || "N/A"}</p></div>
-                <Badge variant="outline">Actif</Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-// Tickets View
-const TicketsView = () => {
-  const { hotelId, user } = useAuth();
-  const { toast } = useToast();
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [technicians, setTechnicians] = useState<any[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [selectedTechId, setSelectedTechId] = useState("");
-  const [showOnlySpecialists, setShowOnlySpecialists] = useState(true);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [detailTicket, setDetailTicket] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-
-  useEffect(() => { if (hotelId) fetchData(); }, [hotelId]);
-
-  const fetchData = async () => {
-    // Tickets de l'hôtel avec catégorie
-    const { data: ticketsData, error: ticketsError } = await supabase
-      .from("tickets")
-      .select(`*, categories(id, name, color)`)
-      .eq("hotel_id", hotelId)
-      .order("created_at", { ascending: false });
-    
-    if (ticketsError) {
-      console.error("Error fetching tickets:", ticketsError);
-      return;
-    }
-
-    // Récupérer les noms des techniciens assignés
-    if (ticketsData) {
-      const ticketsWithTechNames = await Promise.all(
-        ticketsData.map(async (ticket) => {
-          if (ticket.assigned_technician_id) {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("full_name")
-              .eq("id", ticket.assigned_technician_id)
-              .single();
-            return { ...ticket, technician_name: profileData?.full_name || null };
-          }
-          return { ...ticket, technician_name: null };
-        })
-      );
-      setTickets(ticketsWithTechNames);
-    }
-    
-    // Tous les techniciens avec leurs spécialités
-    const { data: techData } = await supabase
-      .from("user_roles")
-      .select("user_id, profiles(id, full_name, phone)")
-      .eq("role", "technician");
-    
-    // Récupérer les catégories de chaque technicien
-    if (techData) {
-      const techsWithCategories = await Promise.all(
-        techData.map(async (tech) => {
-          const { data: techCats } = await supabase
-            .from("technician_categories")
-            .select("category_id, categories(name, color)")
-            .eq("technician_id", tech.user_id);
-          return { 
-            ...tech, 
-            categoryIds: techCats?.map(c => c.category_id) || [],
-            categories: techCats || []
-          };
-        })
-      );
-      setTechnicians(techsWithCategories);
-    } else {
-      setTechnicians([]);
-    }
-  };
-
-  const handleAssign = async () => {
-    if (!selectedTicket || !selectedTechId) return;
-    
-    // Récupérer le nom du technicien
-    const selectedTech = technicians.find(t => t.user_id === selectedTechId);
-    const techName = selectedTech?.profiles?.full_name || "Technicien";
-    
-    const { error } = await supabase
-      .from("tickets")
-      .update({ assigned_technician_id: selectedTechId, status: "in_progress" })
-      .eq("id", selectedTicket.id);
-    
-    if (error) { 
-      toast({ title: "Erreur", description: error.message, variant: "destructive" }); 
-      return; 
-    }
-    
-    // Enregistrer dans l'historique
-    await supabase.from("ticket_history").insert({
-      ticket_id: selectedTicket.id,
-      action_type: "technician_assigned",
-      old_value: selectedTicket.technician_name || null,
-      new_value: techName,
-      performed_by: user?.id || null
+    const [editTechnicianDialogOpen, setEditTechnicianDialogOpen] = useState(false);
+    const [editingTechnician, setEditingTechnician] = useState(false);
+    const [selectedTechnicianForEdit, setSelectedTechnicianForEdit] = useState<any>(null);
+    const [editTechnicianForm, setEditTechnicianForm] = useState({
+        email: "",
+        fullName: "",
+        phone: "",
+        password: "",
+        isActive: true,
     });
-    
-    // Si changement de statut, l'enregistrer aussi
-    if (selectedTicket.status !== "in_progress") {
-      await supabase.from("ticket_history").insert({
-        ticket_id: selectedTicket.id,
-        action_type: "status_change",
-        old_value: selectedTicket.status,
-        new_value: "in_progress",
-        performed_by: user?.id || null
-      });
-    }
-    
-    toast({ title: "Technicien assigné avec succès" });
-    setShowAssignModal(false);
-    setSelectedTechId("");
-    fetchData();
-  };
+    const [deletingTechnician, setDeletingTechnician] = useState(false);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "resolved": 
-        return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Résolu</Badge>;
-      case "closed": 
-        return <Badge className="bg-muted text-muted-foreground">Fermé</Badge>;
-      case "in_progress": 
-        return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">En cours</Badge>;
-      case "pending": 
-        return <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">En attente</Badge>;
-      default: 
-        return <Badge className="bg-primary/20 text-primary border-primary/30">Ouvert</Badge>;
-    }
-  };
+    // ✅ Détecter la route active pour afficher le bon contenu
+    const currentView = useMemo(() => {
+        const path = location.pathname;
+        if (path.includes('/tickets')) return 'tickets';
+        if (path.includes('/technicians')) return 'technicians';
+        if (path.includes('/escalations')) return 'escalations';
+        if (path.includes('/payment')) return 'payments'; // Note: menu utilise "payment" mais on garde "payments" pour la cohérence
+        if (path.includes('/reports')) return 'reports';
+        return 'dashboard'; // Par défaut, afficher le tableau de bord
+    }, [location.pathname]);
 
-  // Filtrer les techniciens selon la catégorie du ticket
-  const getFilteredTechnicians = () => {
-    if (!selectedTicket || !showOnlySpecialists) return technicians;
-    const ticketCategoryId = selectedTicket.category_id;
-    return technicians.filter(t => t.categoryIds.includes(ticketCategoryId));
-  };
+    const fetchTickets = useCallback(async (hotelIdParam: string) => {
+        setLoading(true);
+        try {
+            const data = await apiService.getTicketsByHotel(hotelIdParam);
+            setTickets(data || []); // S'assurer que tickets est toujours un tableau
+        } catch (error: any) {
+            const errorMessage = error.message || "Impossible de récupérer les tickets";
 
-  const filteredTechnicians = getFilteredTechnicians();
-  const specialistsCount = selectedTicket 
-    ? technicians.filter(t => t.categoryIds.includes(selectedTicket.category_id)).length 
-    : 0;
+            // Initialize with empty array so dashboard still displays
+            setTickets([]);
 
-  // Filtrer les tickets par recherche et statut
-  const filteredTickets = tickets.filter(t => {
-    const matchesSearch = searchQuery === "" || 
-      t.ticket_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.client_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.categories?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+            // Si c'est une erreur 402 (Payment Required), afficher un message spécifique
+            if (errorMessage.includes("402") || errorMessage.includes("Payment Required") || errorMessage.includes("Paiement")) {
+                toast({
+                    title: "Paiement en retard",
+                    description: "Votre abonnement nécessite un paiement. Certaines fonctionnalités peuvent être limitées.",
+                    variant: "destructive",
+                });
+            } else if (!errorMessage.includes("Session expirée") && !errorMessage.includes("401")) {
+                // Ne pas afficher de toast pour les erreurs d'authentification (redirection automatique)
+                toast({
+                    title: "Erreur",
+                    description: errorMessage,
+                    variant: "destructive",
+                });
+            }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 justify-between">
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Rechercher par numéro, email, catégorie..." 
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full md:w-48">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="open">Ouvert</SelectItem>
-            <SelectItem value="in_progress">En cours</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
-            <SelectItem value="resolved">Résolu</SelectItem>
-            <SelectItem value="closed">Fermé</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+            if (errorMessage.includes("Session expirée") || errorMessage.includes("401")) {
+                setTimeout(() => navigate("/login"), 2000);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }, [toast, navigate]);
 
-      <Card className="overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-semibold">Numéro</TableHead>
-              <TableHead className="font-semibold">Catégorie</TableHead>
-              <TableHead className="font-semibold">Client</TableHead>
-              <TableHead className="font-semibold">Technicien</TableHead>
-              <TableHead className="font-semibold">Statut</TableHead>
-              <TableHead className="font-semibold text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTickets.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Aucun ticket trouvé
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTickets.map((t) => (
-                <TableRow key={t.id} className="hover:bg-muted/30">
-                  <TableCell className="font-medium font-mono">{t.ticket_number}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      style={{ 
-                        borderColor: t.categories?.color, 
-                        color: t.categories?.color,
-                        backgroundColor: `${t.categories?.color}15`
-                      }}
-                    >
-                      {t.categories?.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{t.client_email}</TableCell>
-                  <TableCell>
-                    {t.technician_name ? (
-                      <span className="font-medium">{t.technician_name}</span>
-                    ) : (
-                      <span className="text-muted-foreground italic">Non assigné</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(t.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 justify-end">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => { setDetailTicket(t); setShowDetailModal(true); }}
-                        title="Voir les détails"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        onClick={() => { setSelectedTicket(t); setSelectedTechId(""); setShowOnlySpecialists(true); setShowAssignModal(true); }}
-                        title="Assigner un technicien"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+    const fetchHotel = useCallback(async (hotelIdParam: string) => {
+        try {
+            const data = await apiService.getHotelById(hotelIdParam);
+            setHotel(data);
+        } catch (error: any) {
+            // Silent error - hotel is not required to display dashboard
+            // This can happen if payment is overdue (402) or other error
+            setHotel(null); // Ensure hotel is null on error
+        }
+    }, []);
 
-      {/* Modal d'assignation */}
-      <Dialog open={showAssignModal} onOpenChange={setShowAssignModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-serif">Assigner un technicien</DialogTitle>
-            {selectedTicket && (
-              <div className="pt-2 space-y-1">
-                <p className="text-sm text-muted-foreground">
-                  Ticket <span className="font-mono font-medium">{selectedTicket.ticket_number}</span>
-                </p>
-                <Badge 
-                  variant="outline" 
-                  style={{ 
-                    borderColor: selectedTicket.categories?.color, 
-                    color: selectedTicket.categories?.color 
-                  }}
-                >
-                  {selectedTicket.categories?.name}
-                </Badge>
-              </div>
-            )}
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <Label className="text-sm font-medium">Filtrer par spécialité</Label>
-                <p className="text-xs text-muted-foreground">
-                  {specialistsCount} technicien{specialistsCount !== 1 ? 's' : ''} spécialisé{specialistsCount !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <Button 
-                variant={showOnlySpecialists ? "default" : "outline"} 
-                size="sm"
-                onClick={() => setShowOnlySpecialists(!showOnlySpecialists)}
-              >
-                {showOnlySpecialists ? "Spécialistes" : "Tous"}
-              </Button>
-            </div>
-            <div className="space-y-2">
-              <Label>Sélectionner un technicien</Label>
-              <Select value={selectedTechId} onValueChange={setSelectedTechId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un technicien..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTechnicians.length === 0 ? (
-                    <div className="p-3 text-sm text-muted-foreground text-center">
-                      {showOnlySpecialists 
-                        ? "Aucun spécialiste pour cette catégorie"
-                        : "Aucun technicien disponible"
-                      }
-                    </div>
-                  ) : (
-                    filteredTechnicians.map((t) => (
-                      <SelectItem key={t.user_id} value={t.user_id}>
-                        <div className="flex items-center gap-2">
-                          <span>{t.profiles?.full_name}</span>
-                          {t.categoryIds.includes(selectedTicket?.category_id) && (
-                            <Badge variant="secondary" className="text-xs">Spécialiste</Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAssignModal(false)}>Annuler</Button>
-            <Button onClick={handleAssign} disabled={!selectedTechId}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Assigner
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    const fetchTechnicians = useCallback(async (hotelIdParam: string) => {
+        if (!hotelIdParam) {
+            return;
+        }
 
-      {/* Modal détail du ticket */}
-      <TicketDetailDialog 
-        ticket={detailTicket} 
-        open={showDetailModal} 
-        onOpenChange={setShowDetailModal} 
-      />
-    </div>
-  );
-};
+        setLoadingTechnicians(true);
+        try {
+            const data = await apiService.getTechniciansByHotel(hotelIdParam);
 
-// Technicians View
-const TechniciansView = () => {
-  const { hotelId } = useAuth();
-  const { toast } = useToast();
-  const [technicians, setTechnicians] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    fullName: "",
-    phone: "",
-  });
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+            if (Array.isArray(data)) {
+                setTechnicians(data);
+            } else {
+                setTechnicians([]);
+            }
+        } catch (error: any) {
+            setTechnicians([]);
 
-  const fetchTechnicians = async () => {
-    // Tous les techniciens (travaillent sur tous les hôtels)
-    const { data: rolesData } = await supabase
-      .from("user_roles")
-      .select("*, profiles(full_name, phone)")
-      .eq("role", "technician");
-      
-    if (rolesData && rolesData.length > 0) {
-      // Récupérer les catégories pour chaque technicien
-      const techsWithCategories = await Promise.all(
-        rolesData.map(async (role) => {
-          const { data: techCats } = await supabase
-            .from("technician_categories")
-            .select(`category_id, categories(name, color)`)
-            .eq("technician_id", role.user_id);
-          
-          return { ...role, categories: techCats || [] };
-        })
-      );
-      setTechnicians(techsWithCategories);
-    } else {
-      setTechnicians([]);
-    }
-  };
+            // Message d'erreur plus spécifique
+            const errorMessage = error.message || "Impossible de charger les techniciens";
+            const isConnectionError = errorMessage.includes('backend n\'est pas accessible') ||
+                errorMessage.includes('ERR_CONNECTION_REFUSED') ||
+                errorMessage.includes('Failed to fetch');
 
-  const fetchCategories = async () => {
-    const { data } = await supabase.from("categories").select("*");
-    setCategories(data || []);
-  };
+            toast({
+                title: isConnectionError ? "Serveur backend inaccessible" : "Erreur",
+                description: isConnectionError
+                    ? "Le serveur backend n'est pas démarré. Veuillez démarrer le backend Spring Boot sur le port 8080."
+                    : errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setLoadingTechnicians(false);
+        }
+    }, [toast]);
 
-  useEffect(() => { 
-    fetchTechnicians();
-    fetchCategories();
-  }, [hotelId]);
+    const fetchPlans = useCallback(async () => {
+        try {
+            const data = await apiService.getAllPlans();
+            setPlans(data || []);
+        } catch (error: any) {
+            setPlans([]);
+        }
+    }, []);
 
-  const toggleCategory = (categoryId: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
+    const fetchSubscription = useCallback(async (hotelIdParam: string) => {
+        if (!hotelIdParam) return;
 
-  const handleCreateTechnician = async () => {
-    if (!formData.email || !formData.password || !formData.fullName) {
-      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires", variant: "destructive" });
-      return;
-    }
+        setLoadingSubscription(true);
+        try {
+            const data = await apiService.getHotelSubscription(hotelIdParam);
+            setCurrentSubscription(data.exists === false ? null : data);
+        } catch (error: any) {
+            setCurrentSubscription(null);
+        } finally {
+            setLoadingSubscription(false);
+        }
+    }, []);
 
-    if (selectedCategories.length === 0) {
-      toast({ title: "Erreur", description: "Veuillez sélectionner au moins une spécialité", variant: "destructive" });
-      return;
-    }
+    // Fonction pour assigner un technicien à un ticket
+    const handleAssignTechnician = useCallback(async (ticketId: string, technicianId: string) => {
+        if (!user?.userId) return;
 
-    setLoading(true);
-    try {
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-          },
-        },
-      });
+        setAssigning(true);
+        try {
+            await apiService.updateTicketStatus(ticketId, 'IN_PROGRESS', user.userId, technicianId);
+            toast({
+                title: "Technicien assigné",
+                description: "Le technicien a été assigné au ticket avec succès.",
+            });
+            // Recharger les tickets
+            if (hotelId) {
+                await fetchTickets(hotelId);
+            }
+            setAssignDialogOpen(false);
+            setSelectedTicket(null);
+        } catch (error: any) {
+            toast({
+                title: "Erreur",
+                description: error.message || "Erreur lors de l'assignation du technicien",
+                variant: "destructive",
+            });
+        } finally {
+            setAssigning(false);
+        }
+    }, [user?.userId, hotelId, fetchTickets, toast]);
 
-      if (signUpError) throw signUpError;
+    // Filtrer les techniciens selon la catégorie du ticket et la recherche
+    const filteredTechnicians = useMemo(() => {
+        if (technicians.length === 0) return technicians;
 
-      if (authData.user) {
-        await supabase.from("profiles").update({ hotel_id: hotelId }).eq("id", authData.user.id);
+        let filtered = technicians;
 
-        const { error: roleError } = await supabase.from("user_roles").insert({
-          user_id: authData.user.id,
-          role: "technician",
-          hotel_id: hotelId,
+        // Filtrage par catégorie du ticket (si un ticket est sélectionné)
+        if (selectedTicket) {
+            const ticketCategory = selectedTicket.categoryName?.toLowerCase() || '';
+
+            // Mapping des catégories vers les spécialités potentielles
+            const categoryToSpecialtyMap: Record<string, string[]> = {
+                'plomberie': ['plomberie', 'plombier', 'eau', 'sanitaire'],
+                'électricité': ['électricité', 'électricien', 'électrique'],
+                'climatisation': ['climatisation', 'chauffage', 'ventilation'],
+                'wifi/internet': ['wifi', 'internet', 'réseau', 'informatique'],
+                'serrurerie': ['serrurerie', 'serrurier', 'sécurité'],
+                'mobilier': ['mobilier', 'menuiserie', 'réparation'],
+                'sanitaires': ['sanitaire', 'plomberie', 'hygiène'],
+                'insonorisation': ['insonorisation', 'acoustique'],
+                'nettoyage': ['nettoyage', 'ménage'],
+                'sécurité': ['sécurité', 'serrurerie'],
+                'restauration': ['restauration', 'cuisine'],
+                'approvisionnement': ['approvisionnement', 'logistique'],
+            };
+
+            // Trouver les spécialités correspondantes
+            const matchingSpecialties = categoryToSpecialtyMap[ticketCategory] || [];
+
+            // Filtrer les techniciens qui ont une spécialité correspondante
+            if (matchingSpecialties.length > 0) {
+                filtered = filtered.filter((tech: any) => {
+                    // Si le technicien n'a pas de spécialités, l'inclure quand même
+                    if (!tech.specialties || tech.specialties.length === 0) {
+                        return true;
+                    }
+
+                    // Vérifier si au moins une spécialité du technicien correspond
+                    return tech.specialties.some((specialty: string) =>
+                        matchingSpecialties.some(match =>
+                            specialty.toLowerCase().includes(match.toLowerCase()) ||
+                            match.toLowerCase().includes(specialty.toLowerCase())
+                        )
+                    );
+                });
+            }
+        }
+
+        // Filtrage par recherche de spécialité
+        if (specialtySearch.trim()) {
+            const searchLower = specialtySearch.toLowerCase().trim();
+            filtered = filtered.filter((tech: any) => {
+                // Rechercher dans le nom
+                const nameMatch = tech.fullName?.toLowerCase().includes(searchLower) ||
+                    tech.email?.toLowerCase().includes(searchLower);
+
+                // Rechercher dans les spécialités
+                const specialtyMatch = tech.specialties?.some((specialty: string) =>
+                    specialty.toLowerCase().includes(searchLower)
+                ) || false;
+
+                return nameMatch || specialtyMatch;
+            });
+        }
+
+        return filtered;
+    }, [selectedTicket, technicians, specialtySearch]);
+
+    useEffect(() => {
+        if (!authLoading && user?.userId && hotelId) {
+            // Charger les tickets en priorité (nécessaire pour le dashboard)
+            fetchTickets(hotelId);
+            // Charger l'hôtel en arrière-plan (optionnel, ne bloque pas l'affichage)
+            fetchHotel(hotelId);
+            // Charger les techniciens pour le dashboard
+            fetchTechnicians(hotelId);
+        }
+    }, [authLoading, user?.userId, hotelId, fetchTickets, fetchHotel, fetchTechnicians]);
+
+    // Charger les données spécifiques selon la vue active
+    useEffect(() => {
+        if (authLoading || !hotelId) return;
+
+        if (currentView === 'technicians') {
+            fetchTechnicians(hotelId);
+        } else if (currentView === 'payments') {
+            fetchPlans();
+            fetchSubscription(hotelId);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, hotelId, currentView]);
+
+    const filteredTickets = useMemo(() => {
+        let filtered = tickets;
+        if (filter.trim()) {
+            const f = filter.toLowerCase();
+            filtered = filtered.filter(t =>
+                t.ticketNumber.toLowerCase().includes(f) ||
+                t.description?.toLowerCase().includes(f) ||
+                t.clientEmail?.toLowerCase().includes(f)
+            );
+        }
+        return filtered;
+    }, [tickets, filter]);
+
+    // Statistiques
+    const stats = useMemo(() => {
+        const total = tickets.length;
+        const open = tickets.filter(t => t.status === 'OPEN').length;
+        const inProgress = tickets.filter(t => t.status === 'IN_PROGRESS').length;
+        const resolved = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
+        const escalated = tickets.filter(t => t.status === 'ESCALATED').length;
+        const urgent = tickets.filter(t => t.isUrgent).length;
+        return { total, open, inProgress, resolved, escalated, urgent };
+    }, [tickets]);
+
+    // Données pour le graphique en donut (tickets par statut)
+    const statusChartData = useMemo(() => {
+        const statusCounts = {
+            'OPEN': tickets.filter(t => t.status === 'OPEN').length,
+            'IN_PROGRESS': tickets.filter(t => t.status === 'IN_PROGRESS').length,
+            'RESOLVED': tickets.filter(t => t.status === 'RESOLVED').length,
+            'CLOSED': tickets.filter(t => t.status === 'CLOSED').length,
+            'ESCALATED': tickets.filter(t => t.status === 'ESCALATED').length,
+        };
+
+        return [
+            { name: 'Ouvert', value: statusCounts.OPEN, color: '#3b82f6' },
+            { name: 'En cours', value: statusCounts.IN_PROGRESS, color: '#f59e0b' },
+            { name: 'Résolu', value: statusCounts.RESOLVED, color: '#10b981' },
+            { name: 'Clôturé', value: statusCounts.CLOSED, color: '#6b7280' },
+            { name: 'Escaladé', value: statusCounts.ESCALATED, color: '#ef4444' },
+        ].filter(item => item.value > 0);
+    }, [tickets]);
+
+    // Données pour le graphique d'évolution sur 7 jours
+    const evolutionData = useMemo(() => {
+        const days = ['Samedi', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+        const today = new Date();
+        const data = days.map((day, index) => {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (6 - index));
+            const dateStr = date.toISOString().split('T')[0];
+
+            const created = tickets.filter(t => {
+                if (!t.createdAt) return false;
+                const ticketDate = new Date(t.createdAt).toISOString().split('T')[0];
+                return ticketDate === dateStr;
+            }).length;
+
+            const resolved = tickets.filter(t => {
+                if (!t.resolvedAt) return false;
+                const ticketDate = new Date(t.resolvedAt).toISOString().split('T')[0];
+                return ticketDate === dateStr;
+            }).length;
+
+            return { day, Créés: created, Résolus: resolved };
+        });
+        return data;
+    }, [tickets]);
+
+    // Données pour le graphique de performance des techniciens
+    const technicianPerformanceData = useMemo(() => {
+        const techMap = new Map<string, { assigned: number; resolved: number }>();
+
+        tickets.forEach(ticket => {
+            if (ticket.assignedTechnicianName) {
+                const techName = ticket.assignedTechnicianName;
+                if (!techMap.has(techName)) {
+                    techMap.set(techName, { assigned: 0, resolved: 0 });
+                }
+                const stats = techMap.get(techName)!;
+                stats.assigned++;
+                if (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') {
+                    stats.resolved++;
+                }
+            }
         });
 
-        if (roleError) throw roleError;
-
-        // Insérer les catégories du technicien
-        const categoryInserts = selectedCategories.map(categoryId => ({
-          technician_id: authData.user!.id,
-          category_id: categoryId,
+        return Array.from(techMap.entries()).map(([name, stats]) => ({
+            name: name.length > 10 ? name.substring(0, 10) + '...' : name,
+            Assignés: stats.assigned,
+            Résolus: stats.resolved,
         }));
+    }, [tickets]);
 
-        await supabase.from("technician_categories").insert(categoryInserts);
+    // Tickets récents (5 derniers)
+    const recentTickets = useMemo(() => {
+        return [...tickets]
+            .sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA;
+            })
+            .slice(0, 5);
+    }, [tickets]);
 
-        toast({ title: "Technicien créé", description: `${formData.fullName} a été ajouté avec succès` });
-        setShowAddModal(false);
-        setFormData({ email: "", password: "", fullName: "", phone: "" });
-        setSelectedCategories([]);
-        fetchTechnicians();
-      }
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message || "Une erreur s'est produite", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={() => setShowAddModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />Ajouter technicien
-        </Button>
-      </div>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nom</TableHead>
-              <TableHead>Téléphone</TableHead>
-              <TableHead>Spécialités</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {technicians.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  Aucun technicien trouvé
-                </TableCell>
-              </TableRow>
-            ) : (
-              technicians.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">{t.profiles?.full_name || "N/A"}</TableCell>
-                  <TableCell>{t.profiles?.phone || "N/A"}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {t.categories?.length > 0 ? (
-                        t.categories.map((cat: any) => (
-                          <Badge 
-                            key={cat.category_id} 
-                            variant="outline"
-                            style={{ borderColor: cat.categories?.color, color: cat.categories?.color }}
-                          >
-                            {cat.categories?.name}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground text-sm">Aucune</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge className="bg-green-500/10 text-green-500">Actif</Badge></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon"><Edit className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="icon"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-
-      {/* Modal création technicien */}
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Ajouter un technicien</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="tech-name">Nom complet *</Label>
-              <Input
-                id="tech-name"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                placeholder="Jean Dupont"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tech-email">Email *</Label>
-              <Input
-                id="tech-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="technicien@hotel.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tech-phone">Téléphone</Label>
-              <Input
-                id="tech-phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+33 6 12 34 56 78"
-              />
-            </div>
-            <div>
-              <Label htmlFor="tech-password">Mot de passe *</Label>
-              <Input
-                id="tech-password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <Label>Spécialités *</Label>
-              <p className="text-sm text-muted-foreground mb-2">Sélectionnez les domaines d'intervention</p>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded-md">
-                {categories.map((cat) => (
-                  <div
-                    key={cat.id}
-                    onClick={() => toggleCategory(cat.id)}
-                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${
-                      selectedCategories.includes(cat.id)
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:bg-accent"
-                    }`}
-                  >
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    <span className="text-sm">{cat.name}</span>
-                  </div>
-                ))}
-              </div>
-              {selectedCategories.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {selectedCategories.length} spécialité(s) sélectionnée(s)
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>Annuler</Button>
-            <Button onClick={handleCreateTechnician} disabled={loading}>
-              {loading ? "Création..." : "Créer le technicien"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-// Escalations View
-const EscalationsView = () => {
-  const { hotelId, user } = useAuth();
-  const { toast } = useToast();
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [escalatedTickets, setEscalatedTickets] = useState<any[]>([]);
-  const [showEscalateModal, setShowEscalateModal] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<any>(null);
-  const [escalationReason, setEscalationReason] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [detailTicket, setDetailTicket] = useState<any>(null);
-
-  useEffect(() => {
-    if (hotelId) fetchData();
-  }, [hotelId]);
-
-  const fetchData = async () => {
-    const { data: ticketsData } = await supabase
-      .from("tickets")
-      .select(`*, categories(id, name, color)`)
-      .eq("hotel_id", hotelId)
-      .in("status", ["open", "in_progress", "pending"])
-      .order("created_at", { ascending: false });
-
-    if (ticketsData) {
-      const ticketsWithDetails = await Promise.all(
-        ticketsData.map(async (ticket) => {
-          let techName = null;
-          if (ticket.assigned_technician_id) {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("full_name")
-              .eq("id", ticket.assigned_technician_id)
-              .single();
-            techName = profileData?.full_name || null;
-          }
-          
-          const { data: historyData } = await supabase
-            .from("ticket_history")
-            .select("*")
-            .eq("ticket_id", ticket.id)
-            .eq("action_type", "escalated")
-            .limit(1);
-          
-          const isEscalated = historyData && historyData.length > 0;
-          return { ...ticket, technician_name: techName, is_escalated: isEscalated };
-        })
-      );
-      
-      setTickets(ticketsWithDetails.filter(t => !t.is_escalated));
-      setEscalatedTickets(ticketsWithDetails.filter(t => t.is_escalated));
-    }
-  };
-
-  const handleEscalate = async () => {
-    if (!selectedTicket || !escalationReason.trim()) {
-      toast({ title: "Erreur", description: "Veuillez indiquer une raison d'escalade", variant: "destructive" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await supabase.from("ticket_history").insert({
-        ticket_id: selectedTicket.id,
-        action_type: "escalated",
-        old_value: selectedTicket.technician_name || "Non assigné",
-        new_value: escalationReason,
-        performed_by: user?.id || null
-      });
-
-      if (selectedTicket.assigned_technician_id) {
-        await supabase.from("ticket_history").insert({
-          ticket_id: selectedTicket.id,
-          action_type: "technician_archived",
-          old_value: selectedTicket.technician_name,
-          new_value: "Escalade - Technicien archivé",
-          performed_by: user?.id || null
+    // Techniciens actifs
+    const activeTechnicians = useMemo(() => {
+        const techSet = new Set<string>();
+        tickets.forEach(ticket => {
+            if (ticket.assignedTechnicianName) {
+                techSet.add(ticket.assignedTechnicianName);
+            }
         });
-      }
+        return Array.from(techSet).slice(0, 5);
+    }, [tickets, technicians]);
 
-      await supabase
-        .from("tickets")
-        .update({ status: "pending", assigned_technician_id: null })
-        .eq("id", selectedTicket.id);
-
-      await supabase.from("ticket_history").insert({
-        ticket_id: selectedTicket.id,
-        action_type: "status_change",
-        old_value: selectedTicket.status,
-        new_value: "pending",
-        performed_by: user?.id || null
-      });
-
-      toast({ title: "Ticket escaladé", description: "Le ticket a été escaladé au SuperAdmin" });
-      setShowEscalateModal(false);
-      setEscalationReason("");
-      setSelectedTicket(null);
-      fetchData();
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "resolved": return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Résolu</Badge>;
-      case "in_progress": return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">En cours</Badge>;
-      case "pending": return <Badge className="bg-orange-500/20 text-orange-600 border-orange-500/30">En attente</Badge>;
-      default: return <Badge className="bg-primary/20 text-primary border-primary/30">Ouvert</Badge>;
-    }
-  };
-
-  const getSlaStatus = (ticket: any) => {
-    if (!ticket.sla_deadline) return null;
-    const now = new Date();
-    const deadline = new Date(ticket.sla_deadline);
-    const hoursRemaining = Math.round((deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
-    if (hoursRemaining < 0) return <Badge variant="destructive" className="text-xs">SLA dépassé</Badge>;
-    if (hoursRemaining <= 4) return <Badge className="bg-orange-500/20 text-orange-600 text-xs">SLA critique</Badge>;
-    return null;
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
-              <TicketCheck className="h-5 w-5 text-primary" />
+    // Vue Dashboard (statistiques)
+    const DashboardView = () => (
+        <div className="space-y-6">
+            {/* KPIs en haut */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Tickets ouverts</CardTitle>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.open}</div>
+                        <p className="text-xs text-muted-foreground">En attente de traitement</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Résolus</CardTitle>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.resolved}</div>
+                        <p className="text-xs text-muted-foreground">Tickets clôturés</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Escaladés</CardTitle>
+                        <ArrowUp className="h-4 w-4 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.escalated}</div>
+                        <p className="text-xs text-muted-foreground">Tickets escaladés</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Techniciens</CardTitle>
+                        <Users className="h-4 w-4 text-blue-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{technicians.length > 0 ? technicians.length : activeTechnicians.length}</div>
+                        <p className="text-xs text-muted-foreground">Techniciens actifs</p>
+                    </CardContent>
+                </Card>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{tickets.length}</p>
-              <p className="text-sm text-muted-foreground">À escalader</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-orange-500/10 rounded-full flex items-center justify-center">
-              <ArrowUpCircle className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{escalatedTickets.length}</p>
-              <p className="text-sm text-muted-foreground">Déjà escaladés</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-destructive/10 rounded-full flex items-center justify-center">
-              <Clock className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{tickets.filter(t => t.sla_deadline && new Date(t.sla_deadline) < new Date()).length}</p>
-              <p className="text-sm text-muted-foreground">SLA dépassés</p>
-            </div>
-          </div>
-        </Card>
-      </div>
 
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold">Tickets pouvant être escaladés</h3>
-          <p className="text-sm text-muted-foreground">Escaladez les tickets complexes vers le SuperAdmin</p>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Numéro</TableHead>
-              <TableHead>Catégorie</TableHead>
-              <TableHead>Technicien</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>SLA</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tickets.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Aucun ticket à escalader
-                </TableCell>
-              </TableRow>
-            ) : (
-              tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-mono font-medium">{ticket.ticket_number}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" style={{ borderColor: ticket.categories?.color, color: ticket.categories?.color, backgroundColor: `${ticket.categories?.color}15` }}>
-                      {ticket.categories?.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{ticket.technician_name || <span className="text-muted-foreground italic">Non assigné</span>}</TableCell>
-                  <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                  <TableCell>
-                    {getSlaStatus(ticket) || (ticket.sla_deadline && <span className="text-xs text-muted-foreground">{format(new Date(ticket.sla_deadline), "dd/MM HH:mm", { locale: fr })}</span>)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 justify-end">
-                      <Button variant="outline" size="sm" onClick={() => { setDetailTicket(ticket); setShowDetailModal(true); }}><Eye className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="sm" onClick={() => { setSelectedTicket(ticket); setShowEscalateModal(true); }}>
-                        <ArrowUpCircle className="h-4 w-4 mr-1" />Escalader
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+            {/* Graphiques */}
+            <div className="grid gap-4 md:grid-cols-3">
+                {/* Graphique en donut - Tickets par statut */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Tickets par statut</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {statusChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={200}>
+                                <PieChart>
+                                    <Pie
+                                        data={statusChartData}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        label={({ name, value }) => `${name}: ${value}`}
+                                        outerRadius={80}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                    >
+                                        {statusChartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                                Aucun ticket
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Graphique linéaire - Évolution sur 7 jours */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Évolution sur 7 jours</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={evolutionData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="day" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Line type="monotone" dataKey="Créés" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+                                <Line type="monotone" dataKey="Résolus" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                {/* Graphique en barres - Performance techniciens */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Performance techniciens</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {technicianPerformanceData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={200}>
+                                <BarChart data={technicianPerformanceData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="Assignés" fill="#3b82f6" />
+                                    <Bar dataKey="Résolus" fill="#f59e0b" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                                Aucun technicien assigné
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Listes en bas */}
+            <div className="grid gap-4 md:grid-cols-2">
+                {/* Tickets récents */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Tickets récents</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {recentTickets.length > 0 ? (
+                            <div className="space-y-3">
+                                {recentTickets.map((ticket) => (
+                                    <div key={ticket.id} className="flex items-center justify-between p-2 border rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <div>
+                                                <div className="font-medium">{ticket.ticketNumber}</div>
+                                                <div className="text-sm text-muted-foreground">{ticket.categoryName || 'Sans catégorie'}</div>
+                                            </div>
+                                        </div>
+                                        <Badge variant={statusVariants[ticket.status]}>
+                                            {statusLabels[ticket.status]}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                Aucun ticket récent
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Techniciens actifs */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Techniciens</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {loadingTechnicians ? (
+                            <div className="text-center py-8 text-muted-foreground">Chargement...</div>
+                        ) : technicians.length > 0 ? (
+                            <div className="space-y-3">
+                                {technicians.slice(0, 5).map((tech: any) => (
+                                    <div key={tech.id} className="flex items-center gap-3 p-2 border rounded-lg">
+                                        <Users className="h-5 w-5 text-muted-foreground" />
+                                        <div className="flex-1">
+                                            <div className="font-medium">{tech.fullName || tech.email || 'Technicien'}</div>
+                                            {tech.email && tech.fullName && (
+                                                <div className="text-sm text-muted-foreground">{tech.email}</div>
+                                            )}
+                                        </div>
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                            {tech.isActive !== false ? 'Actif' : 'Inactif'}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : activeTechnicians.length > 0 ? (
+                            <div className="space-y-3">
+                                {activeTechnicians.map((techName, index) => (
+                                    <div key={index} className="flex items-center gap-3 p-2 border rounded-lg">
+                                        <Users className="h-5 w-5 text-muted-foreground" />
+                                        <div className="flex-1">
+                                            <div className="font-medium">{techName}</div>
+                                        </div>
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                            Actif
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                Aucun technicien
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {hotel && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Informations de l'hôtel</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <div>
+                            <span className="font-medium">Nom :</span> {hotel.name}
+                        </div>
+                        {hotel.email && (
+                            <div>
+                                <span className="font-medium">Email :</span> {hotel.email}
+                            </div>
+                        )}
+                        {hotel.phone && (
+                            <div>
+                                <span className="font-medium">Téléphone :</span> {hotel.phone}
+                            </div>
+                        )}
+                        {hotel.address && (
+                            <div>
+                                <span className="font-medium">Adresse :</span> {hotel.address}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             )}
-          </TableBody>
-        </Table>
-      </Card>
 
-      {escalatedTickets.length > 0 && (
-        <Card className="overflow-hidden">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold">Tickets escaladés</h3>
-            <p className="text-sm text-muted-foreground">En attente de traitement par le SuperAdmin</p>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Numéro</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Date escalade</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {escalatedTickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-mono font-medium">{ticket.ticket_number}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" style={{ borderColor: ticket.categories?.color, color: ticket.categories?.color, backgroundColor: `${ticket.categories?.color}15` }}>
-                      {ticket.categories?.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                  <TableCell className="text-muted-foreground">{format(new Date(ticket.updated_at), "dd/MM/yyyy HH:mm", { locale: fr })}</TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => { setDetailTicket(ticket); setShowDetailModal(true); }}><Eye className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+            {stats.urgent > 0 && (
+                <Card className="border-destructive/40 bg-destructive/5">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="h-5 w-5" />
+                            Tickets urgents
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm">
+                            Vous avez <strong>{stats.urgent}</strong> ticket(s) urgent(s) nécessitant une attention immédiate.
+                        </p>
+                        <Button
+                            variant="destructive"
+                            className="mt-4"
+                            onClick={() => navigate('/dashboard/admin/tickets?urgent=true')}
+                        >
+                            Voir les tickets urgents
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+        </div>
+    );
 
-      <Dialog open={showEscalateModal} onOpenChange={setShowEscalateModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ArrowUpCircle className="h-5 w-5 text-destructive" />Escalader le ticket
-            </DialogTitle>
-            <DialogDescription>Cette action transférera le ticket au SuperAdmin pour traitement prioritaire.</DialogDescription>
-          </DialogHeader>
-          {selectedTicket && (
+    // Vue Tickets avec table formatée
+    const TicketsView = () => {
+        const [advancedFilters, setAdvancedFilters] = useState<FilterState>({
+            search: "",
+            status: "all",
+            categoryId: "all",
+            technicianId: "all",
+            dateFrom: null,
+            dateTo: null,
+            isUrgent: null,
+        });
+        const showUrgent = new URLSearchParams(location.search).get('urgent') === 'true';
+
+        // Préparer les catégories pour les filtres
+        const categoriesForFilters = useMemo(() => {
+            const uniqueCategories = new Map();
+            tickets.forEach(ticket => {
+                if (ticket.categoryId && ticket.categoryName) {
+                    uniqueCategories.set(ticket.categoryId, {
+                        id: ticket.categoryId,
+                        name: ticket.categoryName,
+                        color: ticket.categoryColor || '#3b82f6'
+                    });
+                }
+            });
+            return Array.from(uniqueCategories.values());
+        }, [tickets]);
+
+        const displayTickets = useMemo(() => {
+            let filtered = filteredTickets;
+
+            // Filtre urgent (depuis URL)
+            if (showUrgent) {
+                filtered = filtered.filter(t => t.isUrgent);
+            }
+
+            // Filtres avancés
+            if (advancedFilters.search) {
+                const search = advancedFilters.search.toLowerCase();
+                filtered = filtered.filter(t =>
+                    t.ticketNumber.toLowerCase().includes(search) ||
+                    t.clientEmail?.toLowerCase().includes(search) ||
+                    t.description?.toLowerCase().includes(search) ||
+                    t.categoryName?.toLowerCase().includes(search)
+                );
+            }
+
+            if (advancedFilters.status !== "all") {
+                filtered = filtered.filter(t => t.status === advancedFilters.status);
+            }
+
+            if (advancedFilters.categoryId !== "all") {
+                filtered = filtered.filter(t => t.categoryId === advancedFilters.categoryId);
+            }
+
+            if (advancedFilters.technicianId !== "all") {
+                if (advancedFilters.technicianId === "unassigned") {
+                    filtered = filtered.filter(t => !t.assignedTechnicianId);
+                } else {
+                    filtered = filtered.filter(t => t.assignedTechnicianId === advancedFilters.technicianId);
+                }
+            }
+
+            if (advancedFilters.isUrgent !== null) {
+                filtered = filtered.filter(t => t.isUrgent === advancedFilters.isUrgent);
+            }
+
+            if (advancedFilters.dateFrom) {
+                filtered = filtered.filter(t => {
+                    const ticketDate = new Date(t.createdAt);
+                    return ticketDate >= advancedFilters.dateFrom!;
+                });
+            }
+
+            if (advancedFilters.dateTo) {
+                filtered = filtered.filter(t => {
+                    const ticketDate = new Date(t.createdAt);
+                    const endDate = new Date(advancedFilters.dateTo!);
+                    endDate.setHours(23, 59, 59, 999);
+                    return ticketDate <= endDate;
+                });
+            }
+
+            return filtered;
+        }, [filteredTickets, showUrgent, advancedFilters]);
+
+        const pagination = usePagination({
+            items: displayTickets,
+            itemsPerPage: 10,
+        });
+
+        return (
             <div className="space-y-4">
-              <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                <div className="flex justify-between"><span className="text-sm text-muted-foreground">Ticket</span><span className="font-mono font-medium">{selectedTicket.ticket_number}</span></div>
-                <div className="flex justify-between"><span className="text-sm text-muted-foreground">Catégorie</span><Badge variant="outline" style={{ borderColor: selectedTicket.categories?.color, color: selectedTicket.categories?.color }}>{selectedTicket.categories?.name}</Badge></div>
-                {selectedTicket.technician_name && <div className="flex justify-between"><span className="text-sm text-muted-foreground">Technicien actuel</span><span>{selectedTicket.technician_name}</span></div>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reason">Raison de l'escalade *</Label>
-                <Textarea id="reason" placeholder="Décrivez pourquoi ce ticket nécessite une escalade..." value={escalationReason} onChange={(e) => setEscalationReason(e.target.value)} rows={4} />
-              </div>
-              {selectedTicket.technician_name && (
-                <p className="text-sm text-muted-foreground flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Le technicien actuel sera archivé dans l'historique du ticket.</p>
-              )}
+                <AdvancedFilters
+                    onFilterChange={setAdvancedFilters}
+                    categories={categoriesForFilters}
+                    technicians={technicians}
+                />
+
+                {loading ? (
+                    <div className="text-center py-8 text-muted-foreground">Chargement...</div>
+                ) : displayTickets.length === 0 ? (
+                    <Card>
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                            {showUrgent ? "Aucun ticket urgent" : "Aucun ticket trouvé"}
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Numéro</TableHead>
+                                        <TableHead>Catégorie</TableHead>
+                                        <TableHead>Client</TableHead>
+                                        <TableHead>Technicien</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {pagination.paginatedItems.map((ticket) => (
+                                        <TableRow key={ticket.id}>
+                                            <TableCell className="font-medium">{ticket.ticketNumber}</TableCell>
+                                            <TableCell>
+                                                <Badge style={{ backgroundColor: ticket.categoryColor || '#3b82f6' }}>
+                                                    {ticket.categoryName}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{ticket.clientEmail}</TableCell>
+                                            <TableCell>
+                                                {ticket.assignedTechnicianName || "Non assigné"}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={statusVariants[ticket.status]}>
+                                                    {statusLabels[ticket.status]}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedTicket(ticket);
+                                                            setDetailDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedTicket(ticket);
+                                                            setAssignDialogOpen(true);
+                                                        }}
+                                                    >
+                                                        <UserPlus className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                        {pagination.totalPages > 1 && (
+                            <div className="px-6 pb-4">
+                                <PaginationControls
+                                    currentPage={pagination.currentPage}
+                                    totalPages={pagination.totalPages}
+                                    itemsPerPage={pagination.itemsPerPage}
+                                    totalItems={pagination.totalItems}
+                                    startIndex={pagination.startIndex}
+                                    endIndex={pagination.endIndex}
+                                    onPageChange={pagination.goToPage}
+                                    onItemsPerPageChange={pagination.setItemsPerPage}
+                                />
+                            </div>
+                        )}
+                    </Card>
+                )}
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEscalateModal(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleEscalate} disabled={loading || !escalationReason.trim()}>{loading ? "Escalade..." : "Confirmer l'escalade"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        );
+    };
 
-      <TicketDetailDialog ticket={detailTicket} open={showDetailModal} onOpenChange={setShowDetailModal} />
-    </div>
-  );
+    // Vue Techniciens avec table
+    const TechniciansView = () => {
+
+        return (
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <CardTitle>Gestion des techniciens</CardTitle>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                if (hotelId) {
+                                    fetchTechnicians(hotelId);
+                                }
+                            }}
+                            disabled={loadingTechnicians}
+                        >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${loadingTechnicians ? 'animate-spin' : ''}`} />
+                            Rafraîchir
+                        </Button>
+                        <Button onClick={() => setAddTechnicianDialogOpen(true)}>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            + Ajouter technicien
+                        </Button>
+                    </div>
+                </div>
+
+                {loadingTechnicians ? (
+                    <div className="text-center py-8 text-muted-foreground">Chargement...</div>
+                ) : (
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nom</TableHead>
+                                        <TableHead>Téléphone</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Spécialités</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {!technicians || technicians.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8">
+                                                <div className="space-y-2">
+                                                    <p className="text-muted-foreground">Aucun technicien trouvé</p>
+                                                    {hotelId && (
+                                                        <div className="mt-2 text-xs space-y-1">
+                                                            <p className="text-muted-foreground">Hotel ID: {hotelId}</p>
+                                                            <Button
+                                                                variant="link"
+                                                                size="sm"
+                                                                onClick={() => hotelId && fetchTechnicians(hotelId)}
+                                                                className="mt-2"
+                                                            >
+                                                                Réessayer
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                    <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-xs text-left max-w-md mx-auto">
+                                                        <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-1">
+                                                            💡 Astuce
+                                                        </p>
+                                                        <p className="text-yellow-700 dark:text-yellow-300">
+                                                            Si vous voyez des erreurs "ERR_CONNECTION_REFUSED" dans la console,
+                                                            assurez-vous que le backend Spring Boot est démarré sur le port 8080.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        technicians.map((tech: any, index: number) => {
+                                            // Utiliser un identifiant unique pour la clé
+                                            const techKey = tech.id || tech.userId || `tech-${index}`;
+                                            return (
+                                                <TableRow key={techKey}>
+                                                    <TableCell className="font-medium">
+                                                        {tech.fullName || tech.email || `Technicien ${index + 1}`}
+                                                    </TableCell>
+                                                    <TableCell>{tech.phone || "N/A"}</TableCell>
+                                                    <TableCell className="text-sm text-muted-foreground">
+                                                        {tech.email || "N/A"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {tech.specialties && Array.isArray(tech.specialties) && tech.specialties.length > 0 ? (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {tech.specialties.map((specialty: string, idx: number) => (
+                                                                    <Badge key={idx} variant="outline" className="text-xs">
+                                                                        {specialty}
+                                                                    </Badge>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-sm">Aucune</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={tech.isActive !== false ? "default" : "secondary"}>
+                                                            {tech.isActive !== false ? "Actif" : "Inactif"}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setSelectedTechnicianForEdit(tech);
+                                                                    setEditTechnicianForm({
+                                                                        email: tech.email || "",
+                                                                        fullName: tech.fullName || "",
+                                                                        phone: tech.phone || "",
+                                                                        password: "",
+                                                                        isActive: tech.isActive !== false,
+                                                                    });
+                                                                    setEditTechnicianDialogOpen(true);
+                                                                }}
+                                                                title="Modifier"
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={async () => {
+                                                                    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le technicien ${tech.fullName || tech.email} ? Cette action est irréversible.`)) {
+                                                                        setDeletingTechnician(true);
+                                                                        try {
+                                                                            await apiService.deleteTechnician(tech.id);
+                                                                            toast({
+                                                                                title: "Technicien supprimé",
+                                                                                description: `Le technicien ${tech.fullName || tech.email} a été supprimé avec succès`,
+                                                                            });
+                                                                            // Recharger la liste
+                                                                            if (hotelId) {
+                                                                                await fetchTechnicians(hotelId);
+                                                                            }
+                                                                        } catch (error: any) {
+                                                                            toast({
+                                                                                title: "Erreur",
+                                                                                description: error.message || "Erreur lors de la suppression du technicien",
+                                                                                variant: "destructive",
+                                                                            });
+                                                                        } finally {
+                                                                            setDeletingTechnician(false);
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                title="Supprimer"
+                                                                disabled={deletingTechnician}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        );
+    };
+
+    // Vue Escalades avec statistiques et table
+    const EscalationsView = () => {
+        const escalatableTickets = useMemo(() => {
+            return filteredTickets.filter(t =>
+                t.status === 'OPEN' ||
+                t.status === 'IN_PROGRESS' ||
+                (t.slaDeadline && new Date(t.slaDeadline) < new Date())
+            );
+        }, [filteredTickets]);
+
+        const escalatedCount = tickets.filter(t => t.isUrgent).length;
+        const slaExceededCount = tickets.filter(t =>
+            t.slaDeadline && new Date(t.slaDeadline) < new Date()
+        ).length;
+
+        return (
+            <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">À escalader</CardTitle>
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{escalatableTickets.length}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Déjà escaladés</CardTitle>
+                            <ArrowUp className="h-4 w-4 text-orange-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{escalatedCount}</div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">SLA dépassés</CardTitle>
+                            <Clock className="h-4 w-4 text-destructive" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{slaExceededCount}</div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="space-y-4">
+                    <div>
+                        <CardTitle className="mb-2">Tickets pouvant être escaladés</CardTitle>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Escaladez les tickets complexes vers le SuperAdmin
+                        </p>
+                    </div>
+
+                    <Card>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Numéro</TableHead>
+                                        <TableHead>Catégorie</TableHead>
+                                        <TableHead>Technicien</TableHead>
+                                        <TableHead>Statut</TableHead>
+                                        <TableHead>SLA</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {escalatableTickets.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                                Aucun ticket à escalader
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        escalatableTickets.map((ticket) => (
+                                            <TableRow key={ticket.id}>
+                                                <TableCell className="font-medium">{ticket.ticketNumber}</TableCell>
+                                                <TableCell>
+                                                    <Badge style={{ backgroundColor: ticket.categoryColor || '#3b82f6' }}>
+                                                        {ticket.categoryName}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>{ticket.assignedTechnicianName || "Non assigné"}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={statusVariants[ticket.status]}>
+                                                        {statusLabels[ticket.status]}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {ticket.slaDeadline && new Date(ticket.slaDeadline) < new Date() ? (
+                                                        <Badge variant="destructive">SLA dépassé</Badge>
+                                                    ) : (
+                                                        <Badge variant="outline">Dans les temps</Badge>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <Button variant="ghost" size="sm">
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button variant="destructive" size="sm">
+                                                            <ArrowUp className="h-4 w-4 mr-1" />
+                                                            Escalader
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        );
+    };
+
+    // Vue Paiements avec cartes de plans
+    const PaymentsView = () => {
+        const [searchParams] = useSearchParams();
+
+        // Vérifier si l'utilisateur revient de Stripe
+        useEffect(() => {
+            const success = searchParams.get('success');
+            const canceled = searchParams.get('canceled');
+            const sessionId = searchParams.get('session_id');
+
+            if (success === 'true' && sessionId) {
+                toast({
+                    title: "Paiement réussi !",
+                    description: "Votre abonnement a été activé avec succès.",
+                });
+                // Recharger l'abonnement
+                if (hotelId) {
+                    fetchSubscription(hotelId);
+                }
+                // Nettoyer l'URL
+                window.history.replaceState({}, '', '/dashboard/admin/payment');
+            } else if (canceled === 'true') {
+                toast({
+                    title: "Paiement annulé",
+                    description: "Le paiement a été annulé. Vous pouvez réessayer à tout moment.",
+                    variant: "default",
+                });
+                // Nettoyer l'URL
+                window.history.replaceState({}, '', '/dashboard/admin/payment');
+            }
+        }, [searchParams, hotelId, fetchSubscription, toast]);
+
+        const defaultPlans = [
+            { id: '1', name: 'Starter', price: 99, icon: Zap, features: ['50 tickets par mois', '2 techniciens maximum', 'SLA 48 heures', 'Support email'] },
+            { id: '2', name: 'Pro', price: 199, icon: Star, features: ['150 tickets par mois', '5 techniciens maximum', 'SLA 24 heures', 'Support prioritaire', 'Rapports avancés'], popular: true },
+            { id: '3', name: 'Enterprise', price: 399, icon: Crown, features: ['500 tickets par mois', 'Techniciens illimités', 'SLA 8 heures', 'Support dédié 24/7', 'Rapports personnalisés', 'Option urgence'] },
+        ];
+
+        const displayPlans = plans.length > 0 ? plans.map(p => ({
+            id: p.id,
+            name: p.name,
+            price: p.baseCost,
+            icon: p.name === 'BASIC' || p.name === 'Starter' ? Zap : p.name === 'PRO' || p.name === 'Pro' ? Star : Crown,
+            features: [
+                `${p.ticketQuota} tickets par mois`,
+                p.maxTechnicians === 999 ? 'Techniciens illimités' : `${p.maxTechnicians} techniciens maximum`,
+                `SLA ${p.slaHours} heures`,
+                'Support email',
+            ],
+            popular: p.name === 'PRO' || p.name === 'Pro',
+        })) : defaultPlans;
+
+        const isCurrentPlan = (planId: string) => {
+            return currentSubscription && currentSubscription.planId === planId;
+        };
+
+        return (
+            <div className="space-y-6">
+                <div>
+                    <CardTitle className="text-2xl mb-2">Gestion de l'abonnement</CardTitle>
+                    <p className="text-muted-foreground">
+                        Gérez votre abonnement et choisissez le plan adapté à vos besoins
+                    </p>
+                </div>
+
+                {/* Affichage de l'abonnement actuel */}
+                {loadingSubscription ? (
+                    <Card>
+                        <CardContent className="p-6">
+                            <p className="text-center text-muted-foreground">Chargement de l'abonnement...</p>
+                        </CardContent>
+                    </Card>
+                ) : currentSubscription ? (
+                    <Card className="border-primary">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <CheckCircle className="h-5 w-5 text-green-500" />
+                                Abonnement actuel
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Plan:</span>
+                                <span className="font-semibold">{currentSubscription.planName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Prix:</span>
+                                <span className="font-semibold">{currentSubscription.planBaseCost}€/mois</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Statut:</span>
+                                <Badge variant={currentSubscription.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                                    {currentSubscription.status === 'ACTIVE' ? 'Actif' : currentSubscription.status}
+                                </Badge>
+                            </div>
+                            {currentSubscription.endDate && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Date d'expiration:</span>
+                                    <span>{new Date(currentSubscription.endDate).toLocaleDateString('fr-FR')}</span>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card className="border-orange-500">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-orange-500">
+                                Aucun abonnement actif
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">
+                                Vous n'avez pas d'abonnement actif. Veuillez choisir un plan ci-dessous.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
+
+                <div>
+                    <CardTitle className="text-xl mb-4">Plans disponibles</CardTitle>
+                    <div className="grid gap-6 md:grid-cols-3">
+                        {displayPlans.map((plan) => {
+                            const isCurrent = isCurrentPlan(plan.id);
+                            return (
+                                <Card key={plan.id} className={plan.popular ? "border-primary" : isCurrent ? "border-green-500" : ""}>
+                                    {plan.popular && !isCurrent && (
+                                        <div className="bg-primary text-primary-foreground text-center py-1 text-sm font-medium rounded-t-lg">
+                                            Populaire
+                                        </div>
+                                    )}
+                                    {isCurrent && (
+                                        <div className="bg-green-500 text-white text-center py-1 text-sm font-medium rounded-t-lg">
+                                            Plan actuel
+                                        </div>
+                                    )}
+                                    <CardHeader className="text-center">
+                                        <plan.icon className="h-12 w-12 mx-auto mb-2 text-primary" />
+                                        <CardTitle>{plan.name}</CardTitle>
+                                        <div className="text-3xl font-bold mt-2">
+                                            {plan.price}€<span className="text-sm font-normal text-muted-foreground">/mois</span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <ul className="space-y-2">
+                                            {plan.features.map((feature, idx) => (
+                                                <li key={idx} className="flex items-center gap-2 text-sm">
+                                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                                    {feature}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <Button
+                                            className="w-full"
+                                            variant={isCurrent ? "secondary" : plan.popular ? "default" : "outline"}
+                                            disabled={isCurrent || loadingSubscription}
+                                            onClick={async () => {
+                                                if (!isCurrent && hotelId) {
+                                                    // Vérifier que le plan a un ID valide (UUID)
+                                                    if (!plan.id || plan.id.length < 30) {
+                                                        toast({
+                                                            title: "Erreur",
+                                                            description: "Les plans ne sont pas encore chargés. Veuillez patienter ou recharger la page.",
+                                                            variant: "destructive",
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    try {
+                                                        setLoadingSubscription(true);
+                                                        const session = await apiService.createStripeCheckoutSession(hotelId, plan.id);
+                                                        // Rediriger vers Stripe Checkout
+                                                        window.location.href = session.url;
+                                                    } catch (error: any) {
+                                                        const errorMessage = error.message || "Impossible de créer la session de paiement";
+
+                                                        // Vérifier si c'est une erreur de connexion
+                                                        if (errorMessage.includes("Failed to fetch") || errorMessage.includes("ERR_CONNECTION_REFUSED") || errorMessage.includes("NetworkError")) {
+                                                            toast({
+                                                                title: "Backend non disponible",
+                                                                description: "Le serveur backend n'est pas démarré. Veuillez démarrer le backend sur le port 8080.",
+                                                                variant: "destructive",
+                                                            });
+                                                        } else if (errorMessage.includes("Clé API Stripe non configurée") || errorMessage.includes("Invalid API Key")) {
+                                                            toast({
+                                                                title: "Configuration Stripe requise",
+                                                                description: "Veuillez configurer vos clés Stripe dans application.properties et redémarrer le backend. Consultez CONFIGURATION_STRIPE.md pour plus d'informations.",
+                                                                variant: "destructive",
+                                                            });
+                                                        } else {
+                                                            toast({
+                                                                title: "Erreur",
+                                                                description: errorMessage,
+                                                                variant: "destructive",
+                                                            });
+                                                        }
+                                                    } finally {
+                                                        setLoadingSubscription(false);
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <CreditCard className="h-4 w-4 mr-2" />
+                                            {isCurrent ? "Plan actuel" : loadingSubscription ? "Chargement..." : "S'abonner"}
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground text-center">
+                    Paiement sécurisé. Annulation possible à tout moment.
+                </p>
+            </div>
+        );
+    };
+
+    // Vue Rapports avec cartes de téléchargement
+    const ReportsView = () => {
+        const [loadingReport, setLoadingReport] = useState(false);
+
+        const handleDownloadPDF = async () => {
+            if (!hotelId) {
+                toast({
+                    title: "Erreur",
+                    description: "Hôtel non identifié",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            setLoadingReport(true);
+            try {
+                const now = new Date();
+                const reportData = await apiService.getMonthlyReport(
+                    hotelId,
+                    now.getFullYear(),
+                    now.getMonth() + 1
+                );
+                generateMonthlyReportPDF(reportData, hotel?.name || 'Hôtel');
+                toast({
+                    title: "Succès",
+                    description: "Rapport PDF téléchargé avec succès",
+                });
+            } catch (error: any) {
+                toast({
+                    title: "Erreur",
+                    description: error.message || "Impossible de générer le rapport PDF",
+                    variant: "destructive",
+                });
+            } finally {
+                setLoadingReport(false);
+            }
+        };
+
+        const handleDownloadExcel = async () => {
+            if (!hotelId) {
+                toast({
+                    title: "Erreur",
+                    description: "Hôtel non identifié",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            setLoadingReport(true);
+            try {
+                const now = new Date();
+                const reportData = await apiService.getMonthlyReport(
+                    hotelId,
+                    now.getFullYear(),
+                    now.getMonth() + 1
+                );
+                generatePerformanceReportCSV(reportData, `rapport-performance-${hotel?.name || 'hotel'}-${now.getFullYear()}-${now.getMonth() + 1}.csv`);
+                toast({
+                    title: "Succès",
+                    description: "Rapport CSV téléchargé avec succès",
+                });
+            } catch (error: any) {
+                toast({
+                    title: "Erreur",
+                    description: error.message || "Impossible de générer le rapport CSV",
+                    variant: "destructive",
+                });
+            } finally {
+                setLoadingReport(false);
+            }
+        };
+
+        return (
+            <div className="space-y-6">
+                <CardTitle>Rapports</CardTitle>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <FileText className="h-6 w-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <CardTitle>Rapport Mensuel des Tickets</CardTitle>
+                                    <CardDescription>
+                                        Statistiques complètes des tickets : ouverts, résolus, escaladés, répartition par catégorie.
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button onClick={handleDownloadPDF} className="w-full" disabled={loadingReport}>
+                                {loadingReport ? (
+                                    <>
+                                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        Génération...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Télécharger PDF
+                                    </>
+                                )}
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-green-100 rounded-lg">
+                                    <FileText className="h-6 w-6 text-green-600" />
+                                </div>
+                                <div>
+                                    <CardTitle>Rapport Performance Techniciens</CardTitle>
+                                    <CardDescription>
+                                        Performance détaillée : tickets assignés, résolus, temps de résolution moyen.
+                                    </CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button onClick={handleDownloadExcel} variant="outline" className="w-full" disabled={loadingReport}>
+                                {loadingReport ? (
+                                    <>
+                                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        Génération...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Télécharger CSV
+                                    </>
+                                )}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Contenu des rapports</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <h4 className="font-semibold mb-2">Rapport PDF</h4>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                                <li>Statistiques des tickets par statut</li>
+                                <li>Performance des techniciens</li>
+                                <li>Répartition par catégorie</li>
+                                <li>Date de génération</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-2">Rapport Excel</h4>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                                <li>Feuille résumé avec statistiques</li>
+                                <li>Feuille détail techniciens</li>
+                                <li>Liste complète des tickets</li>
+                                <li>Données exportables et filtrables</li>
+                            </ul>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    };
+
+
+    // Rendu conditionnel selon la vue active
+    const renderContent = () => {
+        switch (currentView) {
+            case 'tickets':
+                return <TicketsView />;
+            case 'technicians':
+                return <TechniciansView />;
+            case 'escalations':
+                return <EscalationsView />;
+            case 'payments':
+                return <PaymentsView />;
+            case 'reports':
+                return <ReportsView />;
+            default:
+                return <DashboardView />;
+        }
+    };
+
+    if (authLoading) {
+        return (
+            <DashboardLayout allowedRoles={["admin"]} title="Tableau de bord">
+                <div className="text-center py-8 text-muted-foreground">Chargement...</div>
+            </DashboardLayout>
+        );
+    }
+
+    if (!user?.userId || !hotelId) {
+        return (
+            <DashboardLayout allowedRoles={["admin"]} title="Tableau de bord">
+                <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                        <p>Session expirée ou non autorisée.</p>
+                        <Button onClick={() => navigate("/login")} className="mt-4">
+                            Se connecter
+                        </Button>
+                    </CardContent>
+                </Card>
+            </DashboardLayout>
+        );
+    }
+
+    // Fonction pour obtenir le titre selon la vue active
+    const getPageTitle = () => {
+        switch (currentView) {
+            case 'tickets':
+                return 'Gestion des tickets';
+            case 'technicians':
+                return 'Gestion des techniciens';
+            case 'escalations':
+                return 'Escalades';
+            case 'payments':
+                return 'Paiement et abonnement';
+            case 'reports':
+                return 'Rapports';
+            default:
+                return 'Tableau de bord';
+        }
+    };
+
+    return (
+        <>
+            <DashboardLayout allowedRoles={["admin"]} title={getPageTitle()}>
+                {renderContent()}
+            </DashboardLayout>
+
+            {/* Dialog pour assigner un technicien */}
+            <Dialog open={assignDialogOpen} onOpenChange={(open) => {
+                setAssignDialogOpen(open);
+                if (!open) {
+                    setSelectedTicket(null);
+                    setSpecialtySearch("");
+                }
+            }}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Assigner un technicien</DialogTitle>
+                        <DialogDescription>
+                            {selectedTicket && (
+                                <>
+                                    Sélectionnez un technicien pour le ticket <strong>{selectedTicket.ticketNumber}</strong>
+                                    <br />
+                                    Catégorie: <Badge style={{ backgroundColor: selectedTicket.categoryColor || '#3b82f6' }}>
+                                        {selectedTicket.categoryName}
+                                    </Badge>
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Champ de recherche */}
+                    <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Rechercher par nom, email ou spécialité..."
+                            value={specialtySearch}
+                            onChange={(e) => setSpecialtySearch(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
+
+                    <div className="max-h-[400px] overflow-y-auto">
+                        {loadingTechnicians ? (
+                            <div className="text-center py-8 text-muted-foreground">Chargement des techniciens...</div>
+                        ) : filteredTechnicians.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                Aucun technicien disponible
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {filteredTechnicians.map((tech: any) => (
+                                    <div
+                                        key={tech.id}
+                                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                                        onClick={() => {
+                                            if (selectedTicket && !assigning) {
+                                                handleAssignTechnician(selectedTicket.id, tech.id);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Users className="h-5 w-5 text-muted-foreground" />
+                                            <div className="flex-1">
+                                                <div className="font-medium">{tech.fullName || tech.email}</div>
+                                                {tech.email && tech.fullName && (
+                                                    <div className="text-sm text-muted-foreground">{tech.email}</div>
+                                                )}
+                                                {tech.phone && (
+                                                    <div className="text-sm text-muted-foreground">{tech.phone}</div>
+                                                )}
+                                                {tech.specialties && tech.specialties.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                        {tech.specialties.map((specialty: string, idx: number) => (
+                                                            <Badge key={idx} variant="secondary" className="text-xs">
+                                                                {specialty}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                            {tech.isActive !== false ? 'Actif' : 'Inactif'}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <div className="flex items-center justify-between w-full">
+                            <div className="text-sm text-muted-foreground">
+                                {filteredTechnicians.length} technicien{filteredTechnicians.length > 1 ? 's' : ''} trouvé{filteredTechnicians.length > 1 ? 's' : ''}
+                            </div>
+                            <Button variant="outline" onClick={() => {
+                                setAssignDialogOpen(false);
+                                setSelectedTicket(null);
+                                setSpecialtySearch("");
+                            }}>
+                                Annuler
+                            </Button>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog de détails du ticket */}
+            {selectedTicket && (
+                <TicketDetailDialog
+                    ticket={selectedTicket}
+                    open={detailDialogOpen}
+                    onOpenChange={setDetailDialogOpen}
+                />
+            )}
+
+            {/* Dialog pour ajouter un technicien */}
+            <Dialog open={addTechnicianDialogOpen} onOpenChange={setAddTechnicianDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Ajouter un technicien</DialogTitle>
+                        <DialogDescription>
+                            Créez un nouveau compte technicien pour votre hôtel
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="fullName">Nom complet *</Label>
+                            <Input
+                                id="fullName"
+                                placeholder="Jean Dupont"
+                                value={newTechnician.fullName}
+                                onChange={(e) => setNewTechnician({ ...newTechnician, fullName: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email *</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="technicien@example.com"
+                                value={newTechnician.email}
+                                onChange={(e) => setNewTechnician({ ...newTechnician, email: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Téléphone</Label>
+                            <Input
+                                id="phone"
+                                type="tel"
+                                placeholder="+33612345678"
+                                value={newTechnician.phone}
+                                onChange={(e) => setNewTechnician({ ...newTechnician, phone: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Mot de passe *</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="Laissez vide pour un mot de passe par défaut"
+                                value={newTechnician.password}
+                                onChange={(e) => setNewTechnician({ ...newTechnician, password: e.target.value })}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Si vide, le mot de passe par défaut sera "Technician123!"
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setAddTechnicianDialogOpen(false);
+                                setNewTechnician({ email: "", password: "", fullName: "", phone: "" });
+                            }}
+                            disabled={creatingTechnician}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!newTechnician.email || !newTechnician.fullName) {
+                                    toast({
+                                        title: "Erreur",
+                                        description: "L'email et le nom complet sont obligatoires",
+                                        variant: "destructive",
+                                    });
+                                    return;
+                                }
+
+                                if (!hotelId) {
+                                    toast({
+                                        title: "Erreur",
+                                        description: "Impossible de déterminer l'hôtel",
+                                        variant: "destructive",
+                                    });
+                                    return;
+                                }
+
+                                setCreatingTechnician(true);
+                                try {
+                                    await apiService.createTechnician({
+                                        email: newTechnician.email,
+                                        password: newTechnician.password || "Technician123!",
+                                        fullName: newTechnician.fullName,
+                                        phone: newTechnician.phone || undefined,
+                                        hotelId: hotelId,
+                                    });
+
+                                    toast({
+                                        title: "Succès",
+                                        description: "Le technicien a été créé avec succès",
+                                    });
+
+                                    // Réinitialiser le formulaire
+                                    setNewTechnician({ email: "", password: "", fullName: "", phone: "" });
+                                    setAddTechnicianDialogOpen(false);
+
+                                    // Recharger la liste des techniciens
+                                    if (hotelId) {
+                                        await fetchTechnicians(hotelId);
+                                    }
+                                } catch (error: any) {
+                                    toast({
+                                        title: "Erreur",
+                                        description: error.message || "Erreur lors de la création du technicien",
+                                        variant: "destructive",
+                                    });
+                                } finally {
+                                    setCreatingTechnician(false);
+                                }
+                            }}
+                            disabled={creatingTechnician || !newTechnician.email || !newTechnician.fullName}
+                        >
+                            {creatingTechnician ? (
+                                <>
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    Création...
+                                </>
+                            ) : (
+                                "Créer le technicien"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog pour modifier un technicien */}
+            <Dialog open={editTechnicianDialogOpen} onOpenChange={setEditTechnicianDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Modifier le technicien</DialogTitle>
+                        <DialogDescription>
+                            Modifiez les informations du technicien {selectedTechnicianForEdit?.fullName || selectedTechnicianForEdit?.email}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-fullName">Nom complet *</Label>
+                            <Input
+                                id="edit-fullName"
+                                placeholder="Jean Dupont"
+                                value={editTechnicianForm.fullName}
+                                onChange={(e) => setEditTechnicianForm({ ...editTechnicianForm, fullName: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-email">Email *</Label>
+                            <Input
+                                id="edit-email"
+                                type="email"
+                                placeholder="technicien@example.com"
+                                value={editTechnicianForm.email}
+                                onChange={(e) => setEditTechnicianForm({ ...editTechnicianForm, email: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-phone">Téléphone</Label>
+                            <Input
+                                id="edit-phone"
+                                type="tel"
+                                placeholder="+33612345678"
+                                value={editTechnicianForm.phone}
+                                onChange={(e) => setEditTechnicianForm({ ...editTechnicianForm, phone: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-password">Nouveau mot de passe</Label>
+                            <Input
+                                id="edit-password"
+                                type="password"
+                                placeholder="Laissez vide pour ne pas changer"
+                                value={editTechnicianForm.password}
+                                onChange={(e) => setEditTechnicianForm({ ...editTechnicianForm, password: e.target.value })}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Laissez vide pour conserver le mot de passe actuel
+                            </p>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="edit-isActive"
+                                checked={editTechnicianForm.isActive}
+                                onChange={(e) => setEditTechnicianForm({ ...editTechnicianForm, isActive: e.target.checked })}
+                                className="rounded border-gray-300"
+                            />
+                            <Label htmlFor="edit-isActive" className="cursor-pointer">
+                                Technicien actif
+                            </Label>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setEditTechnicianDialogOpen(false);
+                                setSelectedTechnicianForEdit(null);
+                                setEditTechnicianForm({ email: "", fullName: "", phone: "", password: "", isActive: true });
+                            }}
+                            disabled={editingTechnician}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={async () => {
+                                if (!editTechnicianForm.email || !editTechnicianForm.fullName) {
+                                    toast({
+                                        title: "Erreur",
+                                        description: "L'email et le nom complet sont obligatoires",
+                                        variant: "destructive",
+                                    });
+                                    return;
+                                }
+
+                                if (!selectedTechnicianForEdit?.id) {
+                                    toast({
+                                        title: "Erreur",
+                                        description: "Technicien non sélectionné",
+                                        variant: "destructive",
+                                    });
+                                    return;
+                                }
+
+                                setEditingTechnician(true);
+                                try {
+                                    const updateData: any = {
+                                        email: editTechnicianForm.email,
+                                        fullName: editTechnicianForm.fullName,
+                                        phone: editTechnicianForm.phone || undefined,
+                                        isActive: editTechnicianForm.isActive,
+                                    };
+
+                                    // Ne mettre à jour le mot de passe que s'il est fourni
+                                    if (editTechnicianForm.password) {
+                                        updateData.password = editTechnicianForm.password;
+                                    }
+
+                                    await apiService.updateTechnician(selectedTechnicianForEdit.id, updateData);
+
+                                    toast({
+                                        title: "Succès",
+                                        description: "Le technicien a été modifié avec succès",
+                                    });
+
+                                    // Réinitialiser le formulaire
+                                    setEditTechnicianForm({ email: "", fullName: "", phone: "", password: "", isActive: true });
+                                    setEditTechnicianDialogOpen(false);
+                                    setSelectedTechnicianForEdit(null);
+
+                                    // Recharger la liste des techniciens
+                                    if (hotelId) {
+                                        await fetchTechnicians(hotelId);
+                                    }
+                                } catch (error: any) {
+                                    toast({
+                                        title: "Erreur",
+                                        description: error.message || "Erreur lors de la modification du technicien",
+                                        variant: "destructive",
+                                    });
+                                } finally {
+                                    setEditingTechnician(false);
+                                }
+                            }}
+                            disabled={editingTechnician || !editTechnicianForm.email || !editTechnicianForm.fullName}
+                        >
+                            {editingTechnician ? (
+                                <>
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    Modification...
+                                </>
+                            ) : (
+                                "Enregistrer"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+        </>
+    );
 };
-
-// Payments View
-const PaymentsView = () => (
-  <div className="space-y-6">
-    <div className="grid md:grid-cols-3 gap-6">
-      <Card className="p-6"><h3 className="text-muted-foreground mb-2">Plan actuel</h3><p className="text-2xl font-bold">Pro</p></Card>
-      <Card className="p-6"><h3 className="text-muted-foreground mb-2">Prochain paiement</h3><p className="text-2xl font-bold">15/12/2025</p></Card>
-      <Card className="p-6"><h3 className="text-muted-foreground mb-2">Montant</h3><p className="text-2xl font-bold text-primary">99€/mois</p></Card>
-    </div>
-    <Card className="p-6"><h3 className="font-bold mb-4">Historique des paiements</h3><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Montant</TableHead><TableHead>Statut</TableHead></TableRow></TableHeader><TableBody><TableRow><TableCell>15/11/2025</TableCell><TableCell>99€</TableCell><TableCell><Badge className="bg-green-500/10 text-green-500">Payé</Badge></TableCell></TableRow></TableBody></Table></Card>
-  </div>
-);
-
-// Reports View
-import AdminReportsView from '@/components/reports/AdminReportsView';
-const ReportsView = () => <AdminReportsView />;
-
-// Settings View
-const SettingsView = () => (
-  <Card className="p-6 max-w-2xl">
-    <h3 className="font-bold mb-4">Paramètres de l'hôtel</h3>
-    <div className="space-y-4">
-      <div><Label>Nom de l'hôtel</Label><Input defaultValue="Hôtel Paris Centre" /></div>
-      <div><Label>Email</Label><Input defaultValue="contact@hotel.com" /></div>
-      <div><Label>Téléphone</Label><Input defaultValue="+33 1 23 45 67 89" /></div>
-      <Button>Enregistrer</Button>
-    </div>
-  </Card>
-);
 
 export default AdminDashboard;

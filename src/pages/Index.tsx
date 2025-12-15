@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { PublicHeader } from "@/components/layout/PublicHeader";
-import { Hotel, TicketCheck, Eye, Users, Building2, Shield, Clock, CheckCircle, Star } from "lucide-react";
+import { Hotel, TicketCheck, Eye, Users, Building2, Clock, CheckCircle, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import luxuryBg from "@/assets/luxury-hotel-bg.jpg";
 
@@ -53,7 +53,7 @@ const Index = () => {
             <Button 
               size="lg" 
               variant="outline"
-              className="w-full sm:w-auto border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 text-lg px-8 py-6"
+              className="w-full sm:w-auto border-2 border-primary-foreground bg-white/95 backdrop-blur-md text-primary font-bold hover:bg-white hover:text-primary hover:border-primary-foreground text-lg px-8 py-6 shadow-xl shadow-primary-foreground/20"
               onClick={() => navigate("/track-ticket")}
             >
               <Eye className="mr-2 h-5 w-5" />
@@ -121,37 +121,50 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <button
               onClick={() => navigate("/login")}
-              className="group bg-card/10 backdrop-blur-sm border border-primary-foreground/20 rounded-lg p-6 text-center hover:bg-card/20 transition-all duration-300 hover:-translate-y-1"
+              className="group relative bg-gradient-to-br from-card/20 via-card/15 to-card/10 backdrop-blur-md border-2 border-primary-foreground/30 rounded-2xl p-8 text-center transition-all duration-500 hover:border-secondary/60 hover:shadow-2xl hover:shadow-secondary/20 hover:-translate-y-2 hover:scale-105 overflow-hidden"
             >
-              <Users className="h-10 w-10 text-secondary mx-auto mb-4" />
-              <span className="text-primary-foreground font-medium">Client</span>
+              {/* Effet de brillance au survol */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              
+              <div className="relative z-10">
+                <div className="h-16 w-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/30 group-hover:scale-110 transition-all duration-300">
+                  <Users className="h-8 w-8 text-secondary group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                <span className="text-primary-foreground font-semibold text-lg group-hover:text-secondary transition-colors duration-300">Client</span>
+              </div>
             </button>
             
             <button
               onClick={() => navigate("/login")}
-              className="group bg-card/10 backdrop-blur-sm border border-primary-foreground/20 rounded-lg p-6 text-center hover:bg-card/20 transition-all duration-300 hover:-translate-y-1"
+              className="group relative bg-gradient-to-br from-card/20 via-card/15 to-card/10 backdrop-blur-md border-2 border-primary-foreground/30 rounded-2xl p-8 text-center transition-all duration-500 hover:border-secondary/60 hover:shadow-2xl hover:shadow-secondary/20 hover:-translate-y-2 hover:scale-105 overflow-hidden"
             >
-              <Building2 className="h-10 w-10 text-secondary mx-auto mb-4" />
-              <span className="text-primary-foreground font-medium">Technicien</span>
+              {/* Effet de brillance au survol */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              
+              <div className="relative z-10">
+                <div className="h-16 w-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/30 group-hover:scale-110 transition-all duration-300">
+                  <Building2 className="h-8 w-8 text-secondary group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                <span className="text-primary-foreground font-semibold text-lg group-hover:text-secondary transition-colors duration-300">Technicien</span>
+              </div>
             </button>
             
             <button
               onClick={() => navigate("/login")}
-              className="group bg-card/10 backdrop-blur-sm border border-primary-foreground/20 rounded-lg p-6 text-center hover:bg-card/20 transition-all duration-300 hover:-translate-y-1"
+              className="group relative bg-gradient-to-br from-card/20 via-card/15 to-card/10 backdrop-blur-md border-2 border-primary-foreground/30 rounded-2xl p-8 text-center transition-all duration-500 hover:border-secondary/60 hover:shadow-2xl hover:shadow-secondary/20 hover:-translate-y-2 hover:scale-105 overflow-hidden"
             >
-              <Hotel className="h-10 w-10 text-secondary mx-auto mb-4" />
-              <span className="text-primary-foreground font-medium">Admin Hôtel</span>
-            </button>
-            
-            <button
-              onClick={() => navigate("/login")}
-              className="group bg-card/10 backdrop-blur-sm border border-primary-foreground/20 rounded-lg p-6 text-center hover:bg-card/20 transition-all duration-300 hover:-translate-y-1"
-            >
-              <Shield className="h-10 w-10 text-secondary mx-auto mb-4" />
-              <span className="text-primary-foreground font-medium">SuperAdmin</span>
+              {/* Effet de brillance au survol */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              
+              <div className="relative z-10">
+                <div className="h-16 w-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/30 group-hover:scale-110 transition-all duration-300">
+                  <Hotel className="h-8 w-8 text-secondary group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                <span className="text-primary-foreground font-semibold text-lg group-hover:text-secondary transition-colors duration-300">Admin Hôtel</span>
+              </div>
             </button>
           </div>
         </div>

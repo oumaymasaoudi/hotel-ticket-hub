@@ -4,15 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { supabase } from "@/integrations/supabase/client";
 import { TicketComments } from "./TicketComments";
 import { TicketImageUpload } from "./TicketImageUpload";
-import { 
-  Clock, 
-  User, 
-  CheckCircle, 
-  Circle, 
-  AlertCircle, 
+import {
+  Clock,
+  User,
+  CheckCircle,
+  Circle,
+  AlertCircle,
   ArrowRight,
   Calendar,
   Mail,
@@ -22,7 +21,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import jsPDF from "jspdf";
+import { exportTicketToPDF } from "@/utils/exportUtils";
 
 interface TicketDetailDialogProps {
   ticket: any;
@@ -65,85 +64,14 @@ const actionLabels: Record<string, string> = {
 };
 
 export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailDialogProps) => {
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [technicianHistory, setTechnicianHistory] = useState<any[]>([]);
-  const [images, setImages] = useState<{ id: string; storage_path: string; file_name: string }[]>([]);
+  const [history] = useState<HistoryEntry[]>([]);
+  const [images, setImages] = useState<{ id: string; storage_path: string; file_name: string }[]>(ticket?.images || []);
 
   useEffect(() => {
-    if (open && ticket) {
-      fetchHistory();
-      fetchImages();
+    if (ticket?.images) {
+      setImages(ticket.images);
     }
-  }, [open, ticket]);
-
-  const fetchImages = async () => {
-    if (!ticket) return;
-    const { data } = await supabase
-      .from("ticket_images")
-      .select("*")
-      .eq("ticket_id", ticket.id)
-      .order("created_at", { ascending: true });
-    setImages(data || []);
-  };
-
-  const fetchHistory = async () => {
-    if (!ticket) return;
-    setLoading(true);
-
-    try {
-      // Récupérer l'historique du ticket
-      const { data: historyData } = await supabase
-        .from("ticket_history")
-        .select("*")
-        .eq("ticket_id", ticket.id)
-        .order("created_at", { ascending: true });
-
-      // Enrichir avec les noms des utilisateurs
-      if (historyData && historyData.length > 0) {
-        const performerIds = [...new Set(historyData.filter(h => h.performed_by).map(h => h.performed_by))];
-        
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", performerIds);
-
-        const profileMap = new Map(profilesData?.map(p => [p.id, p.full_name]) || []);
-
-        const enrichedHistory = historyData.map(h => ({
-          ...h,
-          performer_name: h.performed_by ? profileMap.get(h.performed_by) || "Système" : "Système"
-        }));
-
-        setHistory(enrichedHistory);
-
-        // Extraire l'historique des techniciens
-        const techHistory = historyData
-          .filter(h => h.action_type === "technician_assigned")
-          .map(h => ({
-            ...h,
-            tech_name: h.new_value
-          }));
-        setTechnicianHistory(techHistory);
-      } else {
-        // Si pas d'historique, créer une entrée de création
-        setHistory([{
-          id: "initial",
-          action_type: "created",
-          old_value: null,
-          new_value: null,
-          performed_by: null,
-          created_at: ticket.created_at,
-          performer_name: "Client"
-        }]);
-        setTechnicianHistory([]);
-      }
-    } catch (error) {
-      console.error("Error fetching history:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [ticket, open]);
 
   const getTimelineIcon = (actionType: string) => {
     switch (actionType) {
@@ -181,22 +109,24 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
 
   if (!ticket) return null;
 
-  const slaRemaining = ticket.sla_deadline 
-    ? formatDistanceToNow(new Date(ticket.sla_deadline), { locale: fr, addSuffix: true })
+  const slaDeadline = ticket.slaDeadline || ticket.sla_deadline;
+  const status = (ticket.status || "").toString();
+  const slaRemaining = slaDeadline
+    ? formatDistanceToNow(new Date(slaDeadline), { locale: fr, addSuffix: true })
     : null;
 
-  const isSlaOverdue = ticket.sla_deadline && new Date(ticket.sla_deadline) < new Date();
+  const isSlaOverdue = slaDeadline && new Date(slaDeadline) < new Date();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <span>{ticket.ticket_number}</span>
-            <Badge className={statusColors[ticket.status] || statusColors.open}>
-              {statusLabels[ticket.status] || ticket.status}
+            <span>{ticket.ticketNumber || ticket.ticket_number}</span>
+            <Badge className={statusColors[status.toLowerCase()] || statusColors.open}>
+              {statusLabels[status.toLowerCase()] || status}
             </Badge>
-            {ticket.is_urgent && (
+            {ticket.isUrgent && (
               <Badge variant="destructive">Urgent</Badge>
             )}
           </DialogTitle>
@@ -209,31 +139,31 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Catégorie:</span>
-                <span className="font-medium">{ticket.categories?.name}</span>
+                <span className="font-medium">{ticket.categoryName || ticket.categories?.name}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Créé:</span>
                 <span className="font-medium">
-                  {format(new Date(ticket.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
+                  {format(new Date(ticket.createdAt || ticket.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Client:</span>
-                <span className="font-medium">{ticket.client_email}</span>
+                <span className="font-medium">{ticket.clientEmail || ticket.client_email}</span>
               </div>
-              {ticket.client_phone && (
+              {(ticket.clientPhone || ticket.client_phone) && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Tél:</span>
-                  <span className="font-medium">{ticket.client_phone}</span>
+                  <span className="font-medium">{ticket.clientPhone || ticket.client_phone}</span>
                 </div>
               )}
             </div>
 
             {/* SLA */}
-            {ticket.sla_deadline && (
+            {slaDeadline && (
               <div className={`flex items-center gap-2 p-2 rounded-md ${isSlaOverdue ? "bg-destructive/10" : "bg-primary/10"}`}>
                 <Clock className={`h-4 w-4 ${isSlaOverdue ? "text-destructive" : "text-primary"}`} />
                 <span className="text-sm">
@@ -250,11 +180,17 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
             </div>
 
             {/* Photos */}
-            {images.length > 0 && (
-              <div>
-                <TicketImageUpload ticketId={ticket.id} existingImages={images} readOnly />
-              </div>
-            )}
+            <div>
+              <TicketImageUpload
+                ticketId={ticket.id}
+                existingImages={images}
+                readOnly={false}
+                onImagesChange={(newImages) => {
+                  // Les images sont automatiquement mises à jour via l'API
+                  // On peut recharger le ticket si nécessaire
+                }}
+              />
+            </div>
           </Card>
 
           {/* Technicien actuel */}
@@ -263,36 +199,18 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               <User className="h-4 w-4" />
               Technicien assigné
             </h4>
-            {ticket.profiles?.full_name ? (
+            {ticket.assignedTechnicianName || ticket.profiles?.full_name ? (
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                   <User className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">{ticket.profiles.full_name}</p>
+                  <p className="font-medium">{ticket.assignedTechnicianName || ticket.profiles?.full_name}</p>
                   <p className="text-sm text-muted-foreground">Technicien actif</p>
                 </div>
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Aucun technicien assigné</p>
-            )}
-
-            {/* Historique des techniciens */}
-            {technicianHistory.length > 1 && (
-              <div className="mt-4">
-                <p className="text-sm text-muted-foreground mb-2">Historique des assignations:</p>
-                <div className="space-y-2">
-                  {technicianHistory.map((th, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">
-                        {format(new Date(th.created_at), "dd/MM HH:mm", { locale: fr })}
-                      </span>
-                      <ArrowRight className="h-3 w-3" />
-                      <span>{th.tech_name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             )}
           </Card>
 
@@ -302,14 +220,14 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               <Clock className="h-4 w-4" />
               Timeline des événements
             </h4>
-            
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Chargement...</p>
+
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Historique détaillé non disponible.</p>
             ) : (
               <div className="relative">
                 {/* Ligne verticale */}
                 <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border" />
-                
+
                 <div className="space-y-4">
                   {history.map((entry, index) => (
                     <div key={entry.id} className="flex gap-4 relative">
@@ -317,7 +235,7 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
                       <div className="z-10 flex items-center justify-center h-6 w-6 rounded-full bg-background border-2 border-border">
                         {getTimelineIcon(entry.action_type)}
                       </div>
-                      
+
                       {/* Contenu */}
                       <div className="flex-1 pb-2">
                         <div className="flex items-center justify-between">
@@ -360,7 +278,7 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
 
           {/* Bouton Export PDF */}
           <div className="flex justify-end">
-            <Button variant="outline" onClick={() => exportTicketPDF(ticket, history)}>
+            <Button variant="outline" onClick={() => exportTicketToPDF(ticket)}>
               <Download className="h-4 w-4 mr-2" />
               Télécharger PDF
             </Button>
@@ -369,44 +287,4 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
       </DialogContent>
     </Dialog>
   );
-};
-
-const exportTicketPDF = (ticket: any, history: HistoryEntry[]) => {
-  const doc = new jsPDF();
-  let y = 20;
-
-  doc.setFontSize(18);
-  doc.text(`Ticket ${ticket.ticket_number}`, 20, y);
-  y += 15;
-
-  doc.setFontSize(12);
-  doc.text(`Statut: ${statusLabels[ticket.status] || ticket.status}`, 20, y);
-  y += 8;
-  doc.text(`Catégorie: ${ticket.categories?.name || "N/A"}`, 20, y);
-  y += 8;
-  doc.text(`Client: ${ticket.client_email}`, 20, y);
-  y += 8;
-  doc.text(`Créé le: ${format(new Date(ticket.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}`, 20, y);
-  y += 15;
-
-  doc.setFontSize(14);
-  doc.text("Description:", 20, y);
-  y += 8;
-  doc.setFontSize(11);
-  const descLines = doc.splitTextToSize(ticket.description || "", 170);
-  doc.text(descLines, 20, y);
-  y += descLines.length * 6 + 10;
-
-  doc.setFontSize(14);
-  doc.text("Historique:", 20, y);
-  y += 8;
-  doc.setFontSize(10);
-  history.forEach((h) => {
-    if (y > 270) { doc.addPage(); y = 20; }
-    const date = format(new Date(h.created_at), "dd/MM/yyyy HH:mm", { locale: fr });
-    doc.text(`${date} - ${actionLabels[h.action_type] || h.action_type}`, 20, y);
-    y += 6;
-  });
-
-  doc.save(`ticket-${ticket.ticket_number}.pdf`);
 };

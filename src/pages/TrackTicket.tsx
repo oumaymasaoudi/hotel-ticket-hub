@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Search, Download, CheckCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/apiService";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -31,36 +31,26 @@ const TrackTicket = () => {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select(`
-          *,
-          categories (name, color, icon),
-          hotels (name),
-          profiles!tickets_assigned_technician_id_fkey (full_name)
-        `)
-        .eq("client_email", email)
-        .eq("ticket_number", ticketNumber)
-        .maybeSingle();
+      const data = await apiService.getTicketByNumber(ticketNumber);
 
-      if (error) throw error;
-
-      if (!data) {
+      // Vérifie l’email si présent
+      if (email && data.clientEmail.toLowerCase() !== email.toLowerCase()) {
         toast({
           title: "Ticket non trouvé",
           description: "Aucun ticket ne correspond à ces informations. Vérifiez l'email et le numéro de ticket.",
           variant: "destructive",
         });
+        setTicket(null);
+        setShowTicket(false);
         return;
       }
 
       setTicket(data);
       setShowTicket(true);
-    } catch (error) {
-      console.error("Error fetching ticket:", error);
+    } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de récupérer le ticket.",
+        description: error.message || "Impossible de récupérer le ticket.",
         variant: "destructive",
       });
     } finally {
@@ -69,33 +59,11 @@ const TrackTicket = () => {
   };
 
   const handleCloseTicket = async () => {
-    if (!ticket) return;
-
-    try {
-      const { error } = await supabase
-        .from("tickets")
-        .update({
-          status: "closed",
-          resolved_at: new Date().toISOString(),
-        })
-        .eq("id", ticket.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Ticket clôturé",
-        description: "Merci pour votre retour ! Votre ticket a été clôturé avec succès.",
-      });
-
-      handleSearch();
-    } catch (error) {
-      console.error("Error closing ticket:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de clôturer le ticket.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Action non disponible",
+      description: "La clôture de ticket nécessite une authentification.",
+      variant: "destructive",
+    });
   };
 
   const handleDownloadPDF = async () => {
@@ -117,7 +85,6 @@ const TrackTicket = () => {
         description: "Le rapport PDF a été téléchargé avec succès.",
       });
     } catch (error) {
-      console.error("Error generating PDF:", error);
       toast({
         title: "Erreur",
         description: "Impossible de générer le PDF.",
@@ -196,17 +163,17 @@ const TrackTicket = () => {
               <div id="ticket-details" className="pt-6 border-t border-border space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-lg font-semibold text-card-foreground">Ticket {ticket.ticket_number}</h3>
+                    <h3 className="text-lg font-semibold text-card-foreground">Ticket {ticket.ticketNumber}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {ticket.hotels?.name} • Créé le {new Date(ticket.created_at).toLocaleDateString('fr-FR')}
+                      {ticket.hotelName} • Créé le {new Date(ticket.createdAt).toLocaleDateString('fr-FR')}
                     </p>
                   </div>
-                  {getStatusBadge(ticket.status)}
+                  {getStatusBadge(ticket.status?.toLowerCase?.() || ticket.status)}
                 </div>
 
                 <Card className="p-4 bg-accent border-border">
                   <h4 className="font-semibold mb-2 text-card-foreground">
-                    Catégorie : {ticket.categories?.name || 'N/A'}
+                    Catégorie : {ticket.categoryName || 'N/A'}
                   </h4>
                   <p className="text-sm text-muted-foreground">
                     {ticket.description}
@@ -228,8 +195,8 @@ const TrackTicket = () => {
                         </p>
                       </div>
                     </div>
-                    
-                    {ticket.assigned_technician_id && (
+
+                    {ticket.assignedTechnicianName && (
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
                           <div className="h-3 w-3 rounded-full bg-primary" />
@@ -238,13 +205,13 @@ const TrackTicket = () => {
                         <div className="pb-4">
                           <p className="font-medium text-card-foreground">Technicien assigné</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {ticket.profiles?.full_name || 'N/A'}
+                            {ticket.assignedTechnicianName || 'N/A'}
                           </p>
                         </div>
                       </div>
                     )}
-                    
-                    {(ticket.status === 'in_progress' || ticket.status === 'resolved' || ticket.status === 'closed') && (
+
+                    {(ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
                       <div className="flex gap-3">
                         <div className="flex flex-col items-center">
                           <div className="h-3 w-3 rounded-full bg-primary" />
@@ -255,18 +222,18 @@ const TrackTicket = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     <div className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className={`h-3 w-3 rounded-full ${ticket.status === 'resolved' || ticket.status === 'closed' ? 'bg-green-500' : 'bg-muted'}`} />
+                        <div className={`h-3 w-3 rounded-full ${ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'bg-green-500' : 'bg-muted'}`} />
                       </div>
                       <div>
-                        <p className={`font-medium ${ticket.status === 'resolved' || ticket.status === 'closed' ? 'text-green-500' : 'text-muted-foreground'}`}>
-                          {ticket.status === 'closed' ? 'Clôturé' : 'Résolu'}
+                        <p className={`font-medium ${ticket.status === 'RESOLVED' || ticket.status === 'CLOSED' ? 'text-green-500' : 'text-muted-foreground'}`}>
+                          {ticket.status === 'CLOSED' ? 'Clôturé' : 'Résolu'}
                         </p>
-                        {ticket.resolved_at && (
+                        {ticket.resolvedAt && (
                           <p className="text-xs text-muted-foreground">
-                            {new Date(ticket.resolved_at).toLocaleString('fr-FR')}
+                            {new Date(ticket.resolvedAt).toLocaleString('fr-FR')}
                           </p>
                         )}
                       </div>
@@ -279,16 +246,16 @@ const TrackTicket = () => {
                     <Download className="mr-2 h-4 w-4" />
                     Télécharger PDF
                   </Button>
-                  {ticket.status === 'resolved' && (
-                    <Button 
-                      className="flex-1" 
+                  {ticket.status === 'RESOLVED' && (
+                    <Button
+                      className="flex-1"
                       onClick={handleCloseTicket}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Confirmer la résolution
                     </Button>
                   )}
-                  {ticket.status === 'closed' && (
+                  {ticket.status === 'CLOSED' && (
                     <Button className="flex-1" disabled>
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Ticket clôturé

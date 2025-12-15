@@ -1,73 +1,94 @@
-# Welcome to your Lovable project
+# Hotel Ticket Hub - Frontend
 
-## Project info
+React + Vite frontend application for the Hotel Ticket Hub system.
 
-**URL**: https://lovable.dev/projects/131b7a70-42ac-4e86-802e-d0f1e4c29376
+## 🚀 Quick Start
 
-## How can I edit this code?
+### Prerequisites
 
-There are several ways of editing your application.
+- Node.js 20+
+- npm 9+
 
-**Use Lovable**
+### Installation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/131b7a70-42ac-4e86-802e-d0f1e4c29376) and start prompting.
+```bash
+# Install dependencies
+npm install
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Run development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The application will start on `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🧪 Testing
 
-**Use GitHub Codespaces**
+```bash
+# Run all tests
+npm test
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Run tests with coverage
+npm test -- --coverage --watchAll=false
 
-## What technologies are used for this project?
+# View coverage report
+open coverage/lcov-report/index.html
+```
 
-This project is built with:
+## 🔧 CI/CD
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs:
 
-## How can I deploy this project?
+- **Linting**: ESLint + TypeScript type checking
+- **Testing**: Jest + Coverage
+- **Build**: Vite production build
+- **SonarQube**: Code quality analysis
 
-Simply open [Lovable](https://lovable.dev/projects/131b7a70-42ac-4e86-802e-d0f1e4c29376) and click on Share -> Publish.
+## 📝 Code Quality
 
-## Can I connect a custom domain to my Lovable project?
+- **ESLint**: Code linting
+- **TypeScript**: Type checking
+- **Jest**: Unit testing with coverage (minimum 50%)
+- **SonarQube**: Quality gate
 
-Yes, you can!
+## 🔍 SonarQube Local
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+To run SonarQube locally:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+docker-compose -f docker-compose.sonarqube.yml up -d
+```
+
+Access SonarQube at `http://localhost:9001` (admin/admin)
+
+**Note**: Uses port 9001 to avoid conflict with backend SonarQube instance.
+
+## 📋 Features
+
+- **Authentication**: Login and registration
+- **Dashboard**: Role-specific dashboards (SuperAdmin, Admin, Technician, Client)
+- **Ticket Management**: Create, view, track, and manage tickets
+- **Technician Management**: CRUD operations for technicians (Admin only)
+- **Payment Management**: Stripe integration for subscriptions
+- **Reporting**: PDF and CSV export with statistics
+- **Comments**: Add comments to tickets
+- **Notifications**: Real-time notifications system
+- **Responsive Design**: Mobile-friendly UI
+
+## 🛠️ Build
+
+```bash
+# Production build
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## 📄 License
+
+This project is part of an academic assignment.
+
+## 👥 Authors
+
+Hotel Ticket Hub Development Team
+

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/apiService";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageSquare, Send, User } from "lucide-react";
@@ -11,9 +11,8 @@ import { MessageSquare, Send, User } from "lucide-react";
 interface Comment {
   id: string;
   content: string;
-  created_at: string;
-  user_id: string | null;
-  profiles?: { full_name: string } | null;
+  createdAt: string;
+  user?: { fullName?: string } | null;
 }
 
 interface TicketCommentsProps {
@@ -35,38 +34,45 @@ export const TicketComments = ({ ticketId, readOnly = false }: TicketCommentsPro
 
   const fetchComments = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("ticket_comments")
-      .select("*, profiles(full_name)")
-      .eq("ticket_id", ticketId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching comments:", error);
-    } else {
-      setComments(data || []);
+    try {
+      const data = await apiService.getTicketComments(ticketId);
+      setComments(
+        (data || []).map((c: any) => ({
+          id: c.id,
+          content: c.content,
+          createdAt: c.createdAt || c.created_at,
+          user: c.user || null,
+        }))
+      );
+    } catch (error) {
+      // Error fetching comments
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmit = async () => {
-    if (!newComment.trim() || !user?.id) return;
+    if (!newComment.trim()) return;
+    if (!user?.userId) {
+      toast({ title: "Erreur", description: "Vous devez être connecté pour ajouter un commentaire", variant: "destructive" });
+      return;
+    }
 
     setSubmitting(true);
-    const { error } = await supabase.from("ticket_comments").insert({
-      ticket_id: ticketId,
-      user_id: user.id,
-      content: newComment.trim(),
-    });
-
-    if (error) {
-      toast({ title: "Erreur", description: "Impossible d'ajouter le commentaire", variant: "destructive" });
-    } else {
-      toast({ title: "Commentaire ajouté" });
+    try {
+      await apiService.addTicketComment(ticketId, newComment.trim(), user.userId);
+      toast({ title: "Commentaire ajouté", description: "Votre commentaire a été ajouté avec succès" });
       setNewComment("");
       fetchComments();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'ajouter le commentaire",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   return (
@@ -89,10 +95,10 @@ export const TicketComments = ({ ticketId, readOnly = false }: TicketCommentsPro
                   <User className="h-3 w-3 text-primary" />
                 </div>
                 <span className="text-sm font-medium">
-                  {comment.profiles?.full_name || "Utilisateur"}
+                  {comment.user?.fullName || "Utilisateur"}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(comment.created_at), "dd MMM yyyy à HH:mm", { locale: fr })}
+                  {format(new Date(comment.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
                 </span>
               </div>
               <p className="text-sm pl-8">{comment.content}</p>

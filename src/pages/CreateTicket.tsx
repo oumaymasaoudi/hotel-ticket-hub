@@ -10,8 +10,8 @@ import { PublicHeader } from "@/components/layout/PublicHeader";
 import { TicketImageUpload } from "@/components/tickets/TicketImageUpload";
 import { ArrowLeft, ArrowRight, Check, Copy, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { apiService } from "@/services/apiService";
 import {
   Zap,
   Droplet,
@@ -43,7 +43,7 @@ const CreateTicket = () => {
   const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [createdTicket, setCreatedTicket] = useState<{ number: string; category: string } | null>(null);
-  
+
   const [hotels, setHotels] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
 
@@ -53,13 +53,22 @@ const CreateTicket = () => {
   }, []);
 
   const fetchHotels = async () => {
-    const { data } = await supabase.from("hotels").select("id, name").eq("is_active", true);
-    if (data) setHotels(data);
+    try {
+      const data = await apiService.getActiveHotels();
+      setHotels(data);
+    } catch (error) {
+      // Error fetching hotels
+    }
   };
 
   const fetchCategories = async () => {
-    const { data } = await supabase.from("categories").select("id, name, icon, color");
-    if (data) setCategories(data);
+    try {
+      const data = await apiService.getCategories();
+      // Utiliser les catégories de l'API si elles existent, sinon utiliser les valeurs par défaut
+      setCategories(data || []);
+    } catch (error) {
+      setCategories([]);
+    }
   };
 
   const handleNext = () => {
@@ -70,65 +79,31 @@ const CreateTicket = () => {
     if (step > 1) setStep(step - 1);
   };
 
-  const uploadImages = async (ticketId: string) => {
-    for (const file of pendingImages) {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${ticketId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("ticket-images")
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        continue;
-      }
-
-      await supabase.from("ticket_images").insert({
-        ticket_id: ticketId,
-        storage_path: fileName,
-        file_name: file.name,
-      });
-    }
-  };
-
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // Generate ticket number
-      const { data: ticketNumber } = await supabase.rpc("generate_ticket_number");
-
-      const { data: ticketData, error } = await supabase.from("tickets").insert({
-        ticket_number: ticketNumber,
-        client_email: email,
-        client_phone: phone || null,
-        hotel_id: hotelId,
-        category_id: selectedCategoryId,
+      const ticketData = await apiService.createTicket({
+        hotelId,
+        categoryId: selectedCategoryId,
+        clientEmail: email,
+        clientPhone: phone || undefined,
         description,
-        status: "open",
-      }).select("id").single();
-
-      if (error) throw error;
-
-      // Upload images if any
-      if (pendingImages.length > 0 && ticketData) {
-        await uploadImages(ticketData.id);
-      }
+        isUrgent: false,
+      }, pendingImages);
 
       const category = categories.find(c => c.id === selectedCategoryId);
       setCreatedTicket({
-        number: ticketNumber,
+        number: ticketData.ticketNumber,
         category: category?.name || "",
       });
-      
+
       setStep(4);
-      
+
       toast({
         title: "Ticket créé avec succès",
-        description: `Votre numéro de ticket est ${ticketNumber}`,
+        description: `Votre numéro de ticket est ${ticketData.ticketNumber}`,
       });
     } catch (error) {
-      console.error("Error creating ticket:", error);
       toast({
         title: "Erreur",
         description: "Impossible de créer le ticket. Veuillez réessayer.",
@@ -323,7 +298,7 @@ const CreateTicket = () => {
                 <h2 className="text-2xl font-bold mb-2 text-card-foreground">Ticket créé avec succès !</h2>
                 <p className="text-muted-foreground mb-6">Votre demande a bien été enregistrée</p>
               </div>
-              
+
               <Card className="p-6 bg-accent border-border">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">

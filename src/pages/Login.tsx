@@ -6,9 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Hotel, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { apiService } from "@/services/apiService";
 import luxuryBg from "@/assets/luxury-hotel-bg.jpg";
 
 const Login = () => {
@@ -21,7 +21,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user && role) {
+    // Ne rediriger que si on est sur la page login et que l'utilisateur est connecté
+    if (!authLoading && user && role && window.location.pathname === '/login') {
       redirectBasedOnRole(role);
     }
   }, [user, role, authLoading]);
@@ -50,30 +51,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const data = await apiService.login(email, password);
+
+      // Sauvegarder les données utilisateur dans le localStorage
+      localStorage.setItem('user_data', JSON.stringify(data));
+      localStorage.setItem('auth_token', data.token);
+
+      toast({
+        title: "Connexion réussie",
+        description: "Bienvenue !",
       });
 
-      if (error) throw error;
-
-      if (data.user) {
-        // Fetch user role
-        const { data: roleData, error: roleError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id)
-          .single();
-
-        if (roleError) throw roleError;
-
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue !",
-        });
-
-        redirectBasedOnRole(roleData.role);
-      }
+      // Recharge la page pour que le contexte Auth détecte le nouvel utilisateur
+      window.location.reload();
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",

@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ImagePlus, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { apiService } from "@/services/apiService";
 
 interface TicketImageUploadProps {
   ticketId?: string;
@@ -24,6 +24,11 @@ export const TicketImageUpload = ({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState(existingImages);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    setImages(existingImages);
+  }, [existingImages]);
 
   const totalImages = images.length + pendingFiles.length;
   const canAddMore = totalImages < maxImages;
@@ -46,8 +51,10 @@ export const TicketImageUpload = ({
     const filesToAdd = validFiles.slice(0, remainingSlots);
 
     if (ticketId) {
-      uploadFiles(filesToAdd);
+      // Upload immédiat pour ticket existant
+      handleUploadToExistingTicket(filesToAdd);
     } else {
+      // Mode création : ajouter aux fichiers en attente
       const newPending = [...pendingFiles, ...filesToAdd];
       setPendingFiles(newPending);
       onImagesChange?.(newPending);
@@ -56,65 +63,42 @@ export const TicketImageUpload = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const uploadFiles = async (files: File[]) => {
+  const handleUploadToExistingTicket = async (files: File[]) => {
     if (!ticketId) return;
+
     setUploading(true);
-
-    for (const file of files) {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${ticketId}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("ticket-images")
-        .upload(fileName, file);
-
-      if (uploadError) {
-        toast({ title: "Erreur", description: `Échec de l'upload: ${file.name}`, variant: "destructive" });
-        continue;
+    try {
+      const response = await apiService.addImagesToTicket(ticketId, files);
+      
+      // Mettre à jour les images existantes
+      if (response.images) {
+        setImages(response.images);
       }
 
-      const { error: dbError } = await supabase.from("ticket_images").insert({
-        ticket_id: ticketId,
-        storage_path: fileName,
-        file_name: file.name,
+      toast({
+        title: "Succès",
+        description: `${files.length} photo(s) ajoutée(s) avec succès`,
       });
 
-      if (dbError) {
-        console.error("DB Error:", dbError);
+      // Notifier le parent si nécessaire
+      if (onImagesChange) {
+        onImagesChange([]);
       }
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'ajouter les photos",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
-
-    await fetchImages();
-    setUploading(false);
-    toast({ title: "Images uploadées avec succès" });
-  };
-
-  const fetchImages = async () => {
-    if (!ticketId) return;
-    const { data } = await supabase
-      .from("ticket_images")
-      .select("*")
-      .eq("ticket_id", ticketId)
-      .order("created_at", { ascending: true });
-    setImages(data || []);
   };
 
   const removePendingFile = (index: number) => {
     const newPending = pendingFiles.filter((_, i) => i !== index);
     setPendingFiles(newPending);
     onImagesChange?.(newPending);
-  };
-
-  const removeUploadedImage = async (imageId: string, storagePath: string) => {
-    await supabase.storage.from("ticket-images").remove([storagePath]);
-    await supabase.from("ticket_images").delete().eq("id", imageId);
-    setImages(images.filter((img) => img.id !== imageId));
-    toast({ title: "Image supprimée" });
-  };
-
-  const getImageUrl = (storagePath: string) => {
-    const { data } = supabase.storage.from("ticket-images").getPublicUrl(storagePath);
-    return data.publicUrl;
   };
 
   return (
@@ -133,7 +117,7 @@ export const TicketImageUpload = ({
             disabled={uploading}
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4 mr-2" />}
-            Ajouter
+            {ticketId ? "Ajouter des photos" : "Ajouter"}
           </Button>
         )}
       </div>
@@ -149,29 +133,46 @@ export const TicketImageUpload = ({
 
       {/* Grille d'images */}
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-        {/* Images uploadées */}
-        {images.map((img) => (
-          <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
-            <img
-              src={getImageUrl(img.storage_path)}
-              alt={img.file_name}
-              className="w-full h-full object-cover"
-            />
-            {!readOnly && (
-              <button
-                type="button"
-                onClick={() => removeUploadedImage(img.id, img.storage_path)}
-                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        ))}
+        {/* Images existantes */}
+        {images.map((image, index) => {
+          // Extraire le nom de fichier du chemin de stockage
+          const fileName = image.storage_path.split(/[/\\]/).pop() || image.file_name;
+          const imageUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/tickets/images/${fileName}`;
+          
+          return (
+            <div key={image.id || index} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
+              <img
+                src={imageUrl}
+                alt={image.file_name}
+                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => window.open(imageUrl, '_blank')}
+                onError={(e) => {
+                  // Fallback si l'image n'est pas accessible
+                  (e.target as HTMLImageElement).src = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999">Image</text></svg>')}`;
+                }}
+              />
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // TODO: Implémenter la suppression d'image
+                    toast({
+                      title: "Info",
+                      description: "La suppression d'images sera disponible prochainement",
+                    });
+                  }}
+                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
 
         {/* Fichiers en attente (mode création) */}
         {pendingFiles.map((file, index) => (
-          <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
+          <div key={`pending-${index}`} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
             <img
               src={URL.createObjectURL(file)}
               alt={file.name}
@@ -190,7 +191,7 @@ export const TicketImageUpload = ({
         ))}
 
         {/* Placeholder pour ajouter */}
-        {!readOnly && canAddMore && totalImages === 0 && (
+        {!readOnly && canAddMore && (
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

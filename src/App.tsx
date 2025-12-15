@@ -12,7 +12,6 @@ import Signup from "./pages/Signup";
 import ClientDashboard from "./pages/ClientDashboard";
 import TechnicianDashboard from "./pages/TechnicianDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminPayment from "./pages/AdminPayment";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -43,7 +42,6 @@ const App = () => {
             
             {/* Admin routes */}
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
-            <Route path="/dashboard/admin/payment" element={<AdminPayment />} />
             <Route path="/dashboard/admin/*" element={<AdminDashboard />} />
             
             {/* SuperAdmin routes */}

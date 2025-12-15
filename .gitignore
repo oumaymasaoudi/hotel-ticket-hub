@@ -7,10 +7,39 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Test
+.jest/
+
+# SonarQube
+.sonar/
+
+# Uploads
+uploads/
+*.gif
+*.jpg
+*.png
+*.pdf
+
+# Temporary
+tmp/
+temp/
+*.tmp
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +51,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS
+Thumbs.db
+
+# Workspace files
+*.code-workspace
+
+# Build outputs
+build/

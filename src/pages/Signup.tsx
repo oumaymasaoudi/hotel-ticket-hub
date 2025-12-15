@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Hotel, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { apiService } from "@/services/apiService";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -23,20 +23,29 @@ interface HotelData {
   name: string;
 }
 
-interface CategoryData {
-  id: string;
-  name: string;
-  color: string;
-}
+// Liste fixe des spécialités pour les techniciens
+const TECHNICIAN_SPECIALTIES = [
+  "Electricité",
+  "Plomberie",
+  "Climatisation / Chauffage",
+  "Internet / WiFi",
+  "Serrurerie",
+  "Chambre",
+  "Salle de bain",
+  "Bruit",
+  "Propreté",
+  "Sécurité",
+  "Restauration / Room Service",
+  "Autres",
+];
 
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelData[]>([]);
-  const [categories, setCategories] = useState<CategoryData[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -49,41 +58,40 @@ const Signup = () => {
 
   useEffect(() => {
     fetchHotels();
-    fetchCategories();
   }, []);
 
   const fetchHotels = async () => {
-    const { data, error } = await supabase
-      .from("hotels")
-      .select("id, name")
-      .eq("is_active", true);
-
-    if (!error && data) {
-      setHotels(data);
+    try {
+      const data = await apiService.getActiveHotels();
+      if (data && data.length > 0) {
+        setHotels(data);
+      } else {
+        toast({
+          title: "Aucun hôtel disponible",
+          description: "Veuillez créer un hôtel via le dashboard SuperAdmin ou exécutez le script create-test-hotel.sql",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger la liste des hôtels",
+        variant: "destructive",
+      });
     }
   };
 
-  const fetchCategories = async () => {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("id, name, color");
-
-    if (!error && data) {
-      setCategories(data);
-    }
-  };
-
-  const toggleCategory = (categoryId: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+  const toggleSpecialty = (specialty: string) => {
+    setSelectedSpecialties((prev) =>
+      prev.includes(specialty)
+        ? prev.filter((s) => s !== specialty)
+        : [...prev, specialty]
     );
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Erreur",
@@ -102,8 +110,8 @@ const Signup = () => {
       return;
     }
 
-    // Seul admin doit sélectionner un hôtel - les techniciens sont assignés dynamiquement
-    if (formData.role === "admin" && !formData.hotelId) {
+    // Admin et Technicien doivent sélectionner un hôtel (règle de gestion)
+    if ((formData.role === "admin" || formData.role === "technician") && !formData.hotelId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un hôtel",
@@ -112,7 +120,7 @@ const Signup = () => {
       return;
     }
 
-    if (formData.role === "technician" && selectedCategories.length === 0) {
+    if (formData.role === "technician" && selectedSpecialties.length === 0) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner au moins une spécialité",
@@ -124,63 +132,27 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      await apiService.register({
         email: formData.email,
         password: formData.password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-          },
-        },
+        fullName: formData.fullName,
+        phone: formData.phone,
+        role: formData.role,
+        hotelId: (formData.role === "admin" || formData.role === "technician") ? formData.hotelId : undefined,
+        specialties:
+          formData.role === "technician" ? selectedSpecialties : undefined,
       });
 
-      if (signUpError) throw signUpError;
+      toast({
+        title: "Compte créé !",
+        description: "Vous pouvez maintenant vous connecter",
+      });
 
-      if (authData.user) {
-        // Update profile with hotel_id if applicable
-        if (formData.hotelId) {
-          await supabase
-            .from("profiles")
-            .update({ hotel_id: formData.hotelId })
-            .eq("id", authData.user.id);
-        }
-
-        // Insert user role
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: authData.user.id,
-            role: formData.role,
-            hotel_id: formData.hotelId || null,
-          });
-
-        if (roleError) throw roleError;
-
-        // Insert technician categories if applicable
-        if (formData.role === "technician" && selectedCategories.length > 0) {
-          const categoryInserts = selectedCategories.map(categoryId => ({
-            technician_id: authData.user!.id,
-            category_id: categoryId,
-          }));
-
-          await supabase.from("technician_categories").insert(categoryInserts);
-        }
-
-        toast({
-          title: "Compte créé !",
-          description: "Votre compte a été créé avec succès",
-        });
-
-        navigate("/login");
-      }
-    } catch (error: any) {
+      navigate("/login");
+    } catch (error) {
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur s'est produite",
+        description: error instanceof Error ? error.message : "Une erreur s'est produite",
         variant: "destructive",
       });
     } finally {
@@ -191,12 +163,12 @@ const Signup = () => {
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4">
       {/* Background */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${luxuryBg})` }}
       />
       <div className="absolute inset-0 bg-primary/85" />
-      
+
       {/* Card */}
       <Card className="relative w-full max-w-md p-8 glass-luxury shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex flex-col items-center mb-8">
@@ -263,51 +235,65 @@ const Signup = () => {
             </Select>
           </div>
 
-          {/* Seul admin sélectionne un hôtel - les techniciens sont assignés dynamiquement */}
-          {formData.role === "admin" && (
+          {/* Admin et Technicien doivent sélectionner un hôtel (règle de gestion) */}
+          {(formData.role === "admin" || formData.role === "technician") && (
             <div>
-              <Label htmlFor="hotel">Hôtel</Label>
-              <Select value={formData.hotelId} onValueChange={(value) => setFormData({ ...formData, hotelId: value })}>
-                <SelectTrigger className="bg-background/50">
-                  <SelectValue placeholder="Sélectionnez un hôtel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {hotels.map((hotel) => (
-                    <SelectItem key={hotel.id} value={hotel.id}>
-                      {hotel.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="hotel">Hôtel *</Label>
+              {hotels.length === 0 ? (
+                <div className="p-4 border border-destructive/40 rounded-lg bg-destructive/5">
+                  <p className="text-sm text-destructive font-medium mb-2">
+                    ⚠️ Aucun hôtel disponible
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Pour créer un compte admin, vous devez d'abord créer un hôtel :
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Connectez-vous en tant que <strong>SuperAdmin</strong></li>
+                    <li>Allez dans <strong>"Hôtels"</strong> → <strong>"Créer un hôtel"</strong></li>
+                    <li>Ou exécutez le script SQL <code className="bg-muted px-1 rounded">create-test-hotel.sql</code></li>
+                  </ol>
+                </div>
+              ) : (
+                <Select value={formData.hotelId} onValueChange={(value) => setFormData({ ...formData, hotelId: value })}>
+                  <SelectTrigger className="bg-background/50">
+                    <SelectValue placeholder="Sélectionnez un hôtel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hotels.map((hotel) => (
+                      <SelectItem key={hotel.id} value={hotel.id}>
+                        {hotel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 
           {formData.role === "technician" && (
             <div>
               <Label>Spécialités</Label>
-              <p className="text-xs text-muted-foreground mb-2">Sélectionnez vos domaines d'intervention</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Sélectionnez vos domaines d&apos;intervention
+              </p>
               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md bg-background/50">
-                {categories.map((cat) => (
+                {TECHNICIAN_SPECIALTIES.map((spec) => (
                   <div
-                    key={cat.id}
-                    onClick={() => toggleCategory(cat.id)}
-                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${
-                      selectedCategories.includes(cat.id)
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:bg-accent"
-                    }`}
+                    key={spec}
+                    onClick={() => toggleSpecialty(spec)}
+                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${selectedSpecialties.includes(spec)
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:bg-accent"
+                      }`}
                   >
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0" 
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    <span className="text-xs">{cat.name}</span>
+                    <div className="w-3 h-3 rounded-full flex-shrink-0 bg-primary/60" />
+                    <span className="text-xs">{spec}</span>
                   </div>
                 ))}
               </div>
-              {selectedCategories.length > 0 && (
+              {selectedSpecialties.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {selectedCategories.length} spécialité(s) sélectionnée(s)
+                  {selectedSpecialties.length} spécialité(s) sélectionnée(s)
                 </p>
               )}
             </div>
@@ -337,9 +323,9 @@ const Signup = () => {
             />
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg" 
+          <Button
+            type="submit"
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg"
             disabled={loading}
           >
             {loading ? "Création..." : "Créer mon compte"}
