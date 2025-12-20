@@ -451,7 +451,7 @@ const AdminDashboard = () => {
             }
         });
         return Array.from(techSet).slice(0, 5);
-    }, [tickets, technicians]);
+    }, [tickets]);
 
     // Vue Dashboard (statistiques)
     const DashboardView = () => (
@@ -742,7 +742,7 @@ const AdminDashboard = () => {
                 }
             });
             return Array.from(uniqueCategories.values());
-        }, [tickets]);
+        }, [filteredTickets]);
 
         const displayTickets = useMemo(() => {
             let filtered = filteredTickets;
@@ -800,7 +800,7 @@ const AdminDashboard = () => {
             }
 
             return filtered;
-        }, [filteredTickets, showUrgent, advancedFilters]);
+        }, [showUrgent, advancedFilters]);
 
         const pagination = usePagination({
             items: displayTickets,
@@ -1085,7 +1085,7 @@ const AdminDashboard = () => {
                 t.status === 'IN_PROGRESS' ||
                 (t.slaDeadline && new Date(t.slaDeadline) < new Date())
             );
-        }, [filteredTickets]);
+        }, [tickets]);
 
         const escalatedCount = tickets.filter(t => t.isUrgent).length;
         const slaExceededCount = tickets.filter(t =>

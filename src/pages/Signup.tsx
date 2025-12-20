@@ -56,11 +56,7 @@ const Signup = () => {
     hotelId: "",
   });
 
-  useEffect(() => {
-    fetchHotels();
-  }, []);
-
-  const fetchHotels = async () => {
+  const fetchHotels = useCallback(async () => {
     try {
       const data = await apiService.getActiveHotels();
       if (data && data.length > 0) {
@@ -79,7 +75,7 @@ const Signup = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
   const toggleSpecialty = (specialty: string) => {
     setSelectedSpecialties((prev) =>

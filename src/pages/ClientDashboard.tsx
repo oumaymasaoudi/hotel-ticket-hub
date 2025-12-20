@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,27 +34,28 @@ const ClientDashboard = () => {
     const [loading, setLoading] = useState(false);
     const [filter, setFilter] = useState("");
 
-    useEffect(() => {
-        if (!authLoading && user?.email) {
-            fetchTickets(user.email);
-        }
-    }, [authLoading, user?.email]);
-
-    const fetchTickets = async (email: string) => {
+    const fetchTickets = useCallback(async (email: string) => {
         setLoading(true);
         try {
             const data = await apiService.getTicketsByEmail(email);
             setTickets(data);
-        } catch (error: any) {
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer vos tickets";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de récupérer vos tickets",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        if (!authLoading && user?.email) {
+            fetchTickets(user.email);
+        }
+    }, [authLoading, user?.email, fetchTickets]);
 
     const filteredTickets = useMemo(() => {
         if (!filter.trim()) return tickets;

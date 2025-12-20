@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +45,7 @@ const SuperAdminDashboard = () => {
         return 'dashboard'; // Par défaut, afficher le tableau de bord
     }, [location.pathname]);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!user?.userId) return;
 
         setLoading(true);
@@ -70,22 +70,23 @@ const SuperAdminDashboard = () => {
             setAllPayments(allPaymentsData || []);
             setPlans(plansData || []);
             setAuditLogs(logsData || []);
-        } catch (error: any) {
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer les données";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de récupérer les données",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.userId, toast]);
 
     useEffect(() => {
         if (!authLoading && user?.userId) {
             fetchData();
         }
-    }, [authLoading, user?.userId]);
+    }, [authLoading, user?.userId, fetchData]);
 
     // Calculer les statistiques
     const stats = useMemo(() => {
@@ -395,16 +396,17 @@ const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
                         variant: "destructive",
                     });
                 }
-            } catch (error: any) {
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Impossible de charger les plans";
                 toast({
                     title: "Erreur",
-                    description: error.message || "Impossible de charger les plans",
+                    description: errorMessage,
                     variant: "destructive",
                 });
             }
         };
         fetchPlans();
-    }, []);
+    }, [toast]);
 
     const filteredHotels = hotels.filter(hotel =>
         hotel.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
@@ -1077,10 +1079,11 @@ const ReportsView = ({ stats, tickets, hotels, users }: any) => {
             try {
                 const report = await apiService.getGlobalReport();
                 setGlobalReport(report);
-            } catch (error: any) {
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Impossible de charger le rapport";
                 toast({
                     title: "Erreur",
-                    description: error.message || "Impossible de charger le rapport",
+                    description: errorMessage,
                     variant: "destructive",
                 });
             } finally {
@@ -1088,7 +1091,7 @@ const ReportsView = ({ stats, tickets, hotels, users }: any) => {
             }
         };
         fetchGlobalReport();
-    }, []);
+    }, [toast]);
 
     return (
         <div className="space-y-4">

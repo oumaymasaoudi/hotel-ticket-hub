@@ -20,15 +20,21 @@ const TrackTicket = () => {
   const [ticketNumber, setTicketNumber] = useState(searchParams.get("ticket") || "");
   const [showTicket, setShowTicket] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [ticket, setTicket] = useState<any>(null);
+  const [ticket, setTicket] = useState<{
+    ticketNumber?: string;
+    ticket_number?: string;
+    status?: string;
+    clientEmail?: string;
+    hotelName?: string;
+    createdAt?: string;
+    created_at?: string;
+    categoryName?: string;
+    description?: string;
+    assignedTechnicianName?: string;
+    resolvedAt?: string;
+  } | null>(null);
 
-  useEffect(() => {
-    if (searchParams.get("email") && searchParams.get("ticket")) {
-      handleSearch();
-    }
-  }, []);
-
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiService.getTicketByNumber(ticketNumber);
@@ -47,16 +53,23 @@ const TrackTicket = () => {
 
       setTicket(data);
       setShowTicket(true);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer le ticket.";
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de récupérer le ticket.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketNumber, email, toast]);
+
+  useEffect(() => {
+    if (searchParams.get("email") && searchParams.get("ticket")) {
+      handleSearch();
+    }
+  }, [searchParams, handleSearch]);
 
   const handleCloseTicket = async () => {
     toast({
