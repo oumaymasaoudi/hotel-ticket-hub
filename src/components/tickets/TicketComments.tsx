@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,19 +28,15 @@ export const TicketComments = ({ ticketId, readOnly = false }: TicketCommentsPro
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchComments();
-  }, [ticketId]);
-
-  const fetchComments = async () => {
+  const fetchComments = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiService.getTicketComments(ticketId);
       setComments(
-        (data || []).map((c: any) => ({
+        (data || []).map((c: { id: string; content: string; createdAt?: string; created_at?: string; user?: { fullName?: string } | null }) => ({
           id: c.id,
           content: c.content,
-          createdAt: c.createdAt || c.created_at,
+          createdAt: c.createdAt || c.created_at || '',
           user: c.user || null,
         }))
       );
@@ -49,7 +45,11 @@ export const TicketComments = ({ ticketId, readOnly = false }: TicketCommentsPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketId]);
+
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
 
   const handleSubmit = async () => {
     if (!newComment.trim()) return;
@@ -64,10 +64,11 @@ export const TicketComments = ({ ticketId, readOnly = false }: TicketCommentsPro
       toast({ title: "Commentaire ajouté", description: "Votre commentaire a été ajouté avec succès" });
       setNewComment("");
       fetchComments();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Impossible d'ajouter le commentaire";
       toast({
         title: "Erreur",
-        description: error.message || "Impossible d'ajouter le commentaire",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

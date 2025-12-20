@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,14 +20,7 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Ne rediriger que si on est sur la page login et que l'utilisateur est connecté
-    if (!authLoading && user && role && window.location.pathname === '/login') {
-      redirectBasedOnRole(role);
-    }
-  }, [user, role, authLoading]);
-
-  const redirectBasedOnRole = (userRole: string) => {
+  const redirectBasedOnRole = useCallback((userRole: string) => {
     switch (userRole) {
       case "client":
         navigate("/dashboard/client");
@@ -44,7 +37,14 @@ const Login = () => {
       default:
         navigate("/");
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    // Ne rediriger que si on est sur la page login et que l'utilisateur est connecté
+    if (!authLoading && user && role && window.location.pathname === '/login') {
+      redirectBasedOnRole(role);
+    }
+  }, [user, role, authLoading, redirectBasedOnRole]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,10 +64,11 @@ const Login = () => {
 
       // Recharge la page pour que le contexte Auth détecte le nouvel utilisateur
       window.location.reload();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Email ou mot de passe incorrect";
       toast({
         title: "Erreur de connexion",
-        description: error.message || "Email ou mot de passe incorrect",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -78,12 +79,12 @@ const Login = () => {
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4">
       {/* Background */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${luxuryBg})` }}
       />
       <div className="absolute inset-0 bg-primary/85" />
-      
+
       {/* Card */}
       <Card className="relative w-full max-w-md p-8 glass-luxury shadow-2xl">
         <div className="flex flex-col items-center mb-8">
@@ -143,28 +144,28 @@ const Login = () => {
             </Button>
           </div>
 
-          <Button 
-            onClick={handleLogin} 
-            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg" 
+          <Button
+            onClick={handleLogin}
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg"
             disabled={!email || !password || loading}
           >
             {loading ? "Connexion..." : "Se connecter"}
           </Button>
 
           <div className="text-center space-y-2">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={() => navigate("/signup")} 
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate("/signup")}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               Créer un compte
             </Button>
             <br />
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={() => navigate("/")} 
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate("/")}
               className="text-sm text-muted-foreground hover:text-foreground"
             >
               Retour à l'accueil

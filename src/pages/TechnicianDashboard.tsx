@@ -91,8 +91,7 @@ const TechnicianDashboard = () => {
         } else if (currentView === 'history') {
             filtered = filtered.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
         } else if (currentView === 'tickets') {
-            // Afficher tous les tickets assignés
-            filtered = filtered;
+            // Afficher tous les tickets assignés (pas de filtre supplémentaire)
         }
 
         // ✅ Appliquer le filtre de recherche
