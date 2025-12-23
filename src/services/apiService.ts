@@ -66,6 +66,87 @@ export interface Category {
   additionalCost?: number;
 }
 
+export interface Technician {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  hotelId: string;
+  isActive: boolean;
+  specialties?: string[];
+  userId?: string;
+}
+
+export interface Subscription {
+  id: string;
+  hotelId: string;
+  planId: string;
+  planName: string;
+  status: string;
+  startDate: string;
+  endDate?: string;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  exists?: boolean;
+  planBaseCost?: number;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  hotelId?: string;
+  isActive: boolean;
+  role?: string;
+  specialties?: string[];
+}
+
+export interface Payment {
+  id: string;
+  hotelId: string;
+  hotelName?: string;
+  amount: number;
+  status: string;
+  dueDate?: string;
+  paidAt?: string;
+  paymentDate?: string;
+  nextPaymentDate?: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface AuditLog {
+  id: string;
+  userId?: string;
+  actionType: string;
+  action?: string;
+  entityType: string;
+  entityId?: string;
+  details?: string;
+  description?: string;
+  timestamp: string;
+  userName?: string;
+  userEmail?: string;
+  hotelName?: string;
+  ipAddress?: string;
+  changes?: string | Record<string, unknown>;
+}
+
+export interface TicketComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  created_at?: string;
+  user?: { fullName?: string } | null;
+}
+
+export interface ReportData {
+  [key: string]: string | number | unknown;
+}
+
 // Utilitaire pour headers sans authentification (dev)
 const getAuthHeaders = () => {
   return {
@@ -183,7 +264,7 @@ export const apiService = {
   },
 
   // ✅ Récupérer l'abonnement actuel d'un hôtel
-  async getHotelSubscription(hotelId: string): Promise<any> {
+  async getHotelSubscription(hotelId: string): Promise<Subscription> {
     const response = await fetch(`${API_BASE_URL}/subscriptions/hotel/${hotelId}`, {
       headers: getAuthHeaders(),
     });
@@ -313,7 +394,7 @@ export const apiService = {
   },
 
   // ✅ Logs d'audit
-  async getAllAuditLogs(): Promise<any[]> {
+  async getAllAuditLogs(): Promise<AuditLog[]> {
     const response = await fetch(`${API_BASE_URL}/audit-logs/all`, {
       headers: getAuthHeaders(),
     });
@@ -488,7 +569,7 @@ export const apiService = {
   },
 
   // ✅ SuperAdmin - Récupérer tous les utilisateurs
-  async getAllUsers(): Promise<any[]> {
+  async getAllUsers(): Promise<User[]> {
     const response = await fetch(`${API_BASE_URL}/users`, {
       headers: getAuthHeaders(),
     });
@@ -507,7 +588,7 @@ export const apiService = {
   },
 
   // ✅ Admin - Récupérer les techniciens d'un hôtel
-  async getTechniciansByHotel(hotelId: string): Promise<any[]> {
+  async getTechniciansByHotel(hotelId: string): Promise<Technician[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/users/hotel/${hotelId}/technicians`, {
         headers: getAuthHeaders(),
@@ -528,12 +609,13 @@ export const apiService = {
       }
 
       return response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Gérer les erreurs de connexion réseau
-      if (error.message.includes('Failed to fetch') || error.message.includes('ERR_CONNECTION_REFUSED')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_CONNECTION_REFUSED')) {
         throw new Error('Le serveur backend n\'est pas accessible. Vérifiez qu\'il est démarré sur http://localhost:8080');
       }
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
   },
 
@@ -544,7 +626,7 @@ export const apiService = {
     fullName: string;
     phone?: string;
     hotelId: string;
-  }): Promise<any> {
+  }): Promise<Technician> {
     const response = await fetch(`${API_BASE_URL}/users/technicians`, {
       method: 'POST',
       headers: {
@@ -575,7 +657,7 @@ export const apiService = {
     phone?: string;
     password?: string;
     isActive?: boolean;
-  }): Promise<any> {
+  }): Promise<Technician> {
     const response = await fetch(`${API_BASE_URL}/users/technicians/${technicianId}`, {
       method: 'PUT',
       headers: {
@@ -619,7 +701,7 @@ export const apiService = {
   },
 
   // ✅ Commentaires sur tickets
-  async getTicketComments(ticketId: string): Promise<any[]> {
+  async getTicketComments(ticketId: string): Promise<TicketComment[]> {
     const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/comments`, {
       headers: getAuthHeaders(),
     });
@@ -637,7 +719,7 @@ export const apiService = {
     return response.json();
   },
 
-  async addTicketComment(ticketId: string, content: string, userId: string): Promise<any> {
+  async addTicketComment(ticketId: string, content: string, userId: string): Promise<TicketComment> {
     const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/comments`, {
       method: 'POST',
       headers: {
@@ -662,7 +744,7 @@ export const apiService = {
   },
 
   // ✅ SuperAdmin - Récupérer les paiements en retard
-  async getOverduePayments(): Promise<any[]> {
+  async getOverduePayments(): Promise<Payment[]> {
     const response = await fetch(`${API_BASE_URL}/payments/overdue`, {
       headers: getAuthHeaders(),
     });
@@ -681,7 +763,7 @@ export const apiService = {
   },
 
   // ✅ Récupérer tous les paiements (pour SuperAdmin)
-  async getAllPayments(): Promise<any[]> {
+  async getAllPayments(): Promise<Payment[]> {
     const response = await fetch(`${API_BASE_URL}/payments/all`, {
       headers: getAuthHeaders(),
     });
@@ -700,7 +782,7 @@ export const apiService = {
   },
 
   // ✅ Rapports - Mensuel pour un hôtel
-  async getMonthlyReport(hotelId: string, year?: number, month?: number): Promise<any> {
+  async getMonthlyReport(hotelId: string, year?: number, month?: number): Promise<ReportData> {
     const params = new URLSearchParams();
     if (year) params.append('year', year.toString());
     if (month) params.append('month', month.toString());
@@ -717,7 +799,7 @@ export const apiService = {
   },
 
   // ✅ Rapports - Hebdomadaire pour un hôtel
-  async getWeeklyReport(hotelId: string, startDate?: string): Promise<any> {
+  async getWeeklyReport(hotelId: string, startDate?: string): Promise<ReportData> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
 
@@ -733,7 +815,7 @@ export const apiService = {
   },
 
   // ✅ Rapports - Quotidien pour un hôtel
-  async getDailyReport(hotelId: string, date?: string): Promise<any> {
+  async getDailyReport(hotelId: string, date?: string): Promise<ReportData> {
     const params = new URLSearchParams();
     if (date) params.append('date', date);
 
@@ -749,7 +831,7 @@ export const apiService = {
   },
 
   // ✅ Rapports - Global (SuperAdmin uniquement)
-  async getGlobalReport(startDate?: string, endDate?: string): Promise<any> {
+  async getGlobalReport(startDate?: string, endDate?: string): Promise<ReportData> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);

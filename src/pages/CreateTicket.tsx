@@ -27,7 +27,7 @@ import {
   Package,
 } from "lucide-react";
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Zap, Droplet, Snowflake, Wifi, Key, BedDouble, Bath, Volume2, Sparkles, Shield, UtensilsCrossed, Package,
 };
 
@@ -350,7 +350,7 @@ const CreateTicket = () => {
   );
 };
 
-function cn(...inputs: any[]) {
+function cn(...inputs: Array<string | undefined | null | false>) {
   return inputs.filter(Boolean).join(" ");
 }
 

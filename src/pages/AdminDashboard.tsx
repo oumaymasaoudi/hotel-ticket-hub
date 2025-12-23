@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel } from "@/services/apiService";
+import { apiService, TicketResponse, Hotel, Plan, Technician, Subscription } from "@/services/apiService";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -64,9 +64,9 @@ const AdminDashboard = () => {
     const location = useLocation();
     const [tickets, setTickets] = useState<TicketResponse[]>([]);
     const [hotel, setHotel] = useState<Hotel | null>(null);
-    const [technicians, setTechnicians] = useState<any[]>([]);
-    const [plans, setPlans] = useState<any[]>([]);
-    const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+    const [technicians, setTechnicians] = useState<Technician[]>([]);
+    const [plans, setPlans] = useState<Plan[]>([]);
+    const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadingTechnicians, setLoadingTechnicians] = useState(false);
     const [loadingSubscription, setLoadingSubscription] = useState(false);
@@ -86,7 +86,7 @@ const AdminDashboard = () => {
     });
     const [editTechnicianDialogOpen, setEditTechnicianDialogOpen] = useState(false);
     const [editingTechnician, setEditingTechnician] = useState(false);
-    const [selectedTechnicianForEdit, setSelectedTechnicianForEdit] = useState<any>(null);
+    const [selectedTechnicianForEdit, setSelectedTechnicianForEdit] = useState<Technician | null>(null);
     const [editTechnicianForm, setEditTechnicianForm] = useState({
         email: "",
         fullName: "",
@@ -112,8 +112,8 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getTicketsByHotel(hotelIdParam);
             setTickets(data || []); // S'assurer que tickets est toujours un tableau
-        } catch (error: any) {
-            const errorMessage = error.message || "Impossible de récupérer les tickets";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer les tickets";
 
             // Initialize with empty array so dashboard still displays
             setTickets([]);
@@ -146,7 +146,7 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getHotelById(hotelIdParam);
             setHotel(data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Silent error - hotel is not required to display dashboard
             // This can happen if payment is overdue (402) or other error
             setHotel(null); // Ensure hotel is null on error
@@ -167,11 +167,11 @@ const AdminDashboard = () => {
             } else {
                 setTechnicians([]);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             setTechnicians([]);
 
             // Message d'erreur plus spécifique
-            const errorMessage = error.message || "Impossible de charger les techniciens";
+            const errorMessage = error instanceof Error ? error.message : "Impossible de charger les techniciens";
             const isConnectionError = errorMessage.includes('backend n\'est pas accessible') ||
                 errorMessage.includes('ERR_CONNECTION_REFUSED') ||
                 errorMessage.includes('Failed to fetch');
@@ -192,7 +192,7 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getAllPlans();
             setPlans(data || []);
-        } catch (error: any) {
+        } catch (error: unknown) {
             setPlans([]);
         }
     }, []);
@@ -204,7 +204,7 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getHotelSubscription(hotelIdParam);
             setCurrentSubscription(data.exists === false ? null : data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             setCurrentSubscription(null);
         } finally {
             setLoadingSubscription(false);
@@ -228,10 +228,10 @@ const AdminDashboard = () => {
             }
             setAssignDialogOpen(false);
             setSelectedTicket(null);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Erreur",
-                description: error.message || "Erreur lors de l'assignation du technicien",
+                description: error instanceof Error ? error.message : "Erreur lors de l'assignation du technicien",
                 variant: "destructive",
             });
         } finally {
@@ -270,7 +270,7 @@ const AdminDashboard = () => {
 
             // Filtrer les techniciens qui ont une spécialité correspondante
             if (matchingSpecialties.length > 0) {
-                filtered = filtered.filter((tech: any) => {
+                filtered = filtered.filter((tech: Technician) => {
                     // Si le technicien n'a pas de spécialités, l'inclure quand même
                     if (!tech.specialties || tech.specialties.length === 0) {
                         return true;
@@ -290,7 +290,7 @@ const AdminDashboard = () => {
         // Filtrage par recherche de spécialité
         if (specialtySearch.trim()) {
             const searchLower = specialtySearch.toLowerCase().trim();
-            filtered = filtered.filter((tech: any) => {
+            filtered = filtered.filter((tech: Technician) => {
                 // Rechercher dans le nom
                 const nameMatch = tech.fullName?.toLowerCase().includes(searchLower) ||
                     tech.email?.toLowerCase().includes(searchLower);
@@ -619,7 +619,7 @@ const AdminDashboard = () => {
                             <div className="text-center py-8 text-muted-foreground">Chargement...</div>
                         ) : technicians.length > 0 ? (
                             <div className="space-y-3">
-                                {technicians.slice(0, 5).map((tech: any) => (
+                                {technicians.slice(0, 5).map((tech: Technician) => (
                                     <div key={tech.id} className="flex items-center gap-3 p-2 border rounded-lg">
                                         <Users className="h-5 w-5 text-muted-foreground" />
                                         <div className="flex-1">
@@ -975,7 +975,7 @@ const AdminDashboard = () => {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        technicians.map((tech: any, index: number) => {
+                                        technicians.map((tech: Technician, index: number) => {
                                             // Utiliser un identifiant unique pour la clé
                                             const techKey = tech.id || tech.userId || `tech-${index}`;
                                             return (
@@ -1041,10 +1041,10 @@ const AdminDashboard = () => {
                                                                             if (hotelId) {
                                                                                 await fetchTechnicians(hotelId);
                                                                             }
-                                                                        } catch (error: any) {
+                                                                        } catch (error: unknown) {
                                                                             toast({
                                                                                 title: "Erreur",
-                                                                                description: error.message || "Erreur lors de la suppression du technicien",
+                                                                                description: error instanceof Error ? error.message : "Erreur lors de la suppression du technicien",
                                                                                 variant: "destructive",
                                                                             });
                                                                         } finally {
@@ -1366,8 +1366,8 @@ const AdminDashboard = () => {
                                                         const session = await apiService.createStripeCheckoutSession(hotelId, plan.id);
                                                         // Rediriger vers Stripe Checkout
                                                         window.location.href = session.url;
-                                                    } catch (error: any) {
-                                                        const errorMessage = error.message || "Impossible de créer la session de paiement";
+                                                    } catch (error: unknown) {
+                                                        const errorMessage = error instanceof Error ? error.message : "Impossible de créer la session de paiement";
 
                                                         // Vérifier si c'est une erreur de connexion
                                                         if (errorMessage.includes("Failed to fetch") || errorMessage.includes("ERR_CONNECTION_REFUSED") || errorMessage.includes("NetworkError")) {
@@ -1439,10 +1439,10 @@ const AdminDashboard = () => {
                     title: "Succès",
                     description: "Rapport PDF téléchargé avec succès",
                 });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 toast({
                     title: "Erreur",
-                    description: error.message || "Impossible de générer le rapport PDF",
+                    description: error instanceof Error ? error.message : "Impossible de générer le rapport PDF",
                     variant: "destructive",
                 });
             } finally {
@@ -1473,10 +1473,10 @@ const AdminDashboard = () => {
                     title: "Succès",
                     description: "Rapport CSV téléchargé avec succès",
                 });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 toast({
                     title: "Erreur",
-                    description: error.message || "Impossible de générer le rapport CSV",
+                    description: error instanceof Error ? error.message : "Impossible de générer le rapport CSV",
                     variant: "destructive",
                 });
             } finally {
@@ -1691,7 +1691,7 @@ const AdminDashboard = () => {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {filteredTechnicians.map((tech: any) => (
+                                {filteredTechnicians.map((tech: Technician) => (
                                     <div
                                         key={tech.id}
                                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
@@ -1868,10 +1868,10 @@ const AdminDashboard = () => {
                                     if (hotelId) {
                                         await fetchTechnicians(hotelId);
                                     }
-                                } catch (error: any) {
+                                } catch (error: unknown) {
                                     toast({
                                         title: "Erreur",
-                                        description: error.message || "Erreur lors de la création du technicien",
+                                        description: error instanceof Error ? error.message : "Erreur lors de la création du technicien",
                                         variant: "destructive",
                                     });
                                 } finally {
@@ -1998,7 +1998,13 @@ const AdminDashboard = () => {
 
                                 setEditingTechnician(true);
                                 try {
-                                    const updateData: any = {
+                                    const updateData: {
+                                        email: string;
+                                        fullName: string;
+                                        phone?: string;
+                                        isActive: boolean;
+                                        password?: string;
+                                    } = {
                                         email: editTechnicianForm.email,
                                         fullName: editTechnicianForm.fullName,
                                         phone: editTechnicianForm.phone || undefined,
@@ -2026,10 +2032,10 @@ const AdminDashboard = () => {
                                     if (hotelId) {
                                         await fetchTechnicians(hotelId);
                                     }
-                                } catch (error: any) {
+                                } catch (error: unknown) {
                                     toast({
                                         title: "Erreur",
-                                        description: error.message || "Erreur lors de la modification du technicien",
+                                        description: error instanceof Error ? error.message : "Erreur lors de la modification du technicien",
                                         variant: "destructive",
                                     });
                                 } finally {

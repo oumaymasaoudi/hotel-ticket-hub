@@ -52,8 +52,8 @@ const TechnicianDashboard = () => {
         try {
             const data = await apiService.getTicketsByTechnician(technicianId);
             setTickets(data);
-        } catch (error: any) {
-            const errorMessage = error.message || "Impossible de récupérer vos tickets";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer vos tickets";
 
             toast({
                 title: "Erreur",
@@ -132,9 +132,11 @@ const TechnicianDashboard = () => {
                 prev.map((t) => (t.id === ticket.id ? { ...t, status: nextStatus } : t))
             );
             toast({ title: "Statut mis à jour", description: `${statusLabels[nextStatus]}` });
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Erreur lors de la mise à jour du statut";
             toast({
                 title: "Erreur",
+                description: errorMessage,
                 description: error.message || "Impossible de mettre à jour le statut",
                 variant: "destructive",
             });
