@@ -726,7 +726,7 @@ const AdminDashboard = () => {
         // Préparer les catégories pour les filtres
         const categoriesForFilters = useMemo(() => {
             const uniqueCategories = new Map();
-            tickets.forEach(ticket => {
+            filteredTickets.forEach(ticket => {
                 if (ticket.categoryId && ticket.categoryName) {
                     uniqueCategories.set(ticket.categoryId, {
                         id: ticket.categoryId,
@@ -736,6 +736,7 @@ const AdminDashboard = () => {
                 }
             });
             return Array.from(uniqueCategories.values());
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [filteredTickets]);
 
         const displayTickets = useMemo(() => {
@@ -1079,7 +1080,8 @@ const AdminDashboard = () => {
                 t.status === 'IN_PROGRESS' ||
                 (t.slaDeadline && new Date(t.slaDeadline) < new Date())
             );
-        }, [tickets]);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [filteredTickets]);
 
         const escalatedCount = tickets.filter(t => t.isUrgent).length;
         const slaExceededCount = tickets.filter(t =>
@@ -1221,7 +1223,8 @@ const AdminDashboard = () => {
                 // Nettoyer l'URL
                 window.history.replaceState({}, '', '/dashboard/admin/payment');
             }
-        }, [searchParams, hotelId, fetchSubscription, toast]);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [searchParams, fetchSubscription]);
 
         const defaultPlans = [
             { id: '1', name: 'Starter', price: 99, icon: Zap, features: ['50 tickets par mois', '2 techniciens maximum', 'SLA 48 heures', 'Support email'] },
