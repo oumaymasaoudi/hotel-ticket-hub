@@ -3,25 +3,24 @@ import { TicketResponse } from '@/services/apiService';
 import jsPDF from 'jspdf';
 
 // Mock jsPDF
-const mockJsPDF = jest.fn().mockImplementation(() => ({
-    text: jest.fn(),
-    save: jest.fn(),
-    setFontSize: jest.fn(),
-    setFont: jest.fn(),
-    addPage: jest.fn(),
-    splitTextToSize: jest.fn((text: string) => [text]),
-    internal: {
-        pageSize: {
-            getWidth: jest.fn(() => 210),
-            getHeight: jest.fn(() => 297),
-        },
-    },
-}));
-
 jest.mock('jspdf', () => {
+    const mockImplementation = () => ({
+        text: jest.fn(),
+        save: jest.fn(),
+        setFontSize: jest.fn(),
+        setFont: jest.fn(),
+        addPage: jest.fn(),
+        splitTextToSize: jest.fn((text: string) => [text]),
+        internal: {
+            pageSize: {
+                getWidth: jest.fn(() => 210),
+                getHeight: jest.fn(() => 297),
+            },
+        },
+    });
     return {
         __esModule: true,
-        default: mockJsPDF,
+        default: jest.fn().mockImplementation(mockImplementation),
     };
 });
 
@@ -102,12 +101,12 @@ describe('exportUtils', () => {
 
             exportReportToPDF(title, content, filename);
 
-            expect(mockJsPDF).toHaveBeenCalled();
+            expect(jsPDF).toHaveBeenCalled();
         });
 
         it('should handle empty sections', () => {
             exportReportToPDF('Test', { sections: [] }, 'test.pdf');
-            expect(mockJsPDF).toHaveBeenCalled();
+            expect(jsPDF).toHaveBeenCalled();
         });
     });
 
@@ -134,7 +133,7 @@ describe('exportUtils', () => {
 
             exportTicketToPDF(ticket);
 
-            expect(mockJsPDF).toHaveBeenCalled();
+            expect(jsPDF).toHaveBeenCalled();
         });
     });
 });
