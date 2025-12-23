@@ -47,7 +47,7 @@ export function AdvancedFilters({
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const updateFilter = (key: keyof FilterState, value: any) => {
+  const updateFilter = (key: keyof FilterState, value: FilterState[keyof FilterState]) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
     onFilterChange(newFilters);

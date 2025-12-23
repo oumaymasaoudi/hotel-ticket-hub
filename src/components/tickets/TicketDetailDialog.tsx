@@ -22,9 +22,10 @@ import {
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { exportTicketToPDF } from "@/utils/exportUtils";
+import { TicketResponse } from "@/services/apiService";
 
 interface TicketDetailDialogProps {
-  ticket: any;
+  ticket: TicketResponse;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
