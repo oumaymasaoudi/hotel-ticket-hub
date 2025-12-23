@@ -84,10 +84,11 @@ export const TicketImageUpload = ({
       if (onImagesChange) {
         onImagesChange([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Impossible d'ajouter les photos";
       toast({
         title: "Erreur",
-        description: error.message || "Impossible d'ajouter les photos",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
