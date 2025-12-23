@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel, Category, Plan } from "@/services/apiService";
+import { apiService, TicketResponse, Hotel, Category, Plan, User, Payment, AuditLog } from "@/services/apiService";
 import { Building2, Users, TicketCheck, DollarSign, AlertTriangle, RefreshCw, TrendingUp, Layers, FileText, History, Settings, Wrench, Edit, Trash2, Plus, Search, Clock, ArrowUp, CheckCircle, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -21,12 +21,12 @@ const SuperAdminDashboard = () => {
     const location = useLocation();
     const [tickets, setTickets] = useState<TicketResponse[]>([]);
     const [hotels, setHotels] = useState<Hotel[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [overduePayments, setOverduePayments] = useState<any[]>([]);
-    const [allPayments, setAllPayments] = useState<any[]>([]);
+    const [overduePayments, setOverduePayments] = useState<Payment[]>([]);
+    const [allPayments, setAllPayments] = useState<Payment[]>([]);
     const [plans, setPlans] = useState<Plan[]>([]);
-    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchFilter, setSearchFilter] = useState("");
 
@@ -200,7 +200,13 @@ const SuperAdminDashboard = () => {
 };
 
 // ✅ Vue Dashboard (par défaut)
-const DashboardView = ({ stats, tickets, hotels, overduePayments }: any) => (
+interface DashboardViewProps {
+    stats: Record<string, number>;
+    tickets: TicketResponse[];
+    hotels: Hotel[];
+    overduePayments: Payment[];
+}
+const DashboardView = ({ stats, tickets, hotels, overduePayments }: DashboardViewProps) => (
     <>
         {/* Statistiques principales */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -444,10 +450,11 @@ const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
             });
             setShowForm(false);
             onHotelCreated();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de créer l'hôtel",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -618,7 +625,7 @@ const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
 };
 
 // ✅ Vue Utilisateurs
-const UsersView = ({ users, searchFilter }: { users: any[]; searchFilter: string }) => {
+const UsersView = ({ users, searchFilter }: { users: User[]; searchFilter: string }) => {
     const filteredUsers = users.filter(user =>
         user.email?.toLowerCase().includes(searchFilter.toLowerCase()) ||
         user.fullName?.toLowerCase().includes(searchFilter.toLowerCase())
@@ -708,10 +715,11 @@ const CategoriesView = ({ categories, searchFilter, onRefresh }: CategoriesViewP
                 additionalCost: 0,
             });
             onRefresh();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de créer la catégorie",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -886,8 +894,8 @@ const CategoriesView = ({ categories, searchFilter, onRefresh }: CategoriesViewP
 
 // ✅ Vue Paiements
 interface PaymentsViewProps {
-    overduePayments: any[];
-    allPayments: any[];
+    overduePayments: Payment[];
+    allPayments: Payment[];
 }
 
 const PaymentsView = ({ overduePayments, allPayments }: PaymentsViewProps) => {
@@ -1068,8 +1076,33 @@ const EscalationsView = ({ tickets }: { tickets: TicketResponse[] }) => (
 );
 
 // ✅ Vue Rapports
-const ReportsView = ({ stats, tickets, hotels, users }: any) => {
-    const [globalReport, setGlobalReport] = useState<any>(null);
+interface ReportsViewProps {
+    stats: Record<string, number>;
+    tickets: TicketResponse[];
+    hotels: Hotel[];
+    users: User[];
+}
+interface TechnicianReport {
+    technicianId: string;
+    technicianName: string;
+    totalTickets?: number;
+    resolvedTickets?: number;
+    [key: string]: string | number | undefined;
+}
+
+interface GlobalReport {
+    totalTickets?: number;
+    openTickets?: number;
+    resolvedTickets?: number;
+    urgentTickets?: number;
+    totalHotels?: number;
+    activeHotels?: number;
+    overduePayments?: number;
+    technicians?: TechnicianReport[];
+    [key: string]: string | number | undefined | TechnicianReport[] | unknown;
+}
+const ReportsView = ({ stats, tickets, hotels, users }: ReportsViewProps) => {
+    const [globalReport, setGlobalReport] = useState<GlobalReport | null>(null);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
 
@@ -1146,7 +1179,7 @@ const ReportsView = ({ stats, tickets, hotels, users }: any) => {
                                 <div>
                                     <p className="text-sm font-medium mb-2">Performances Techniciens</p>
                                     <div className="space-y-2">
-                                        {globalReport.technicians.slice(0, 5).map((tech: any) => (
+                                        {globalReport.technicians?.slice(0, 5).map((tech) => (
                                             <div key={tech.technicianId} className="p-3 border rounded-lg">
                                                 <p className="font-medium">{tech.technicianName}</p>
                                                 <p className="text-sm text-muted-foreground">
@@ -1169,7 +1202,7 @@ const ReportsView = ({ stats, tickets, hotels, users }: any) => {
 
 // ✅ Vue Logs
 interface LogsViewProps {
-    logs: any[];
+    logs: AuditLog[];
     onRefresh: () => void;
 }
 
@@ -1570,8 +1603,9 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
             try {
                 const stats = await apiService.getPlanStatistics();
                 setStatistics(stats);
-            } catch (error: any) {
+            } catch (error: unknown) {
                 // On error, don't block display
+                console.error("Error loading statistics:", error);
             }
         };
         loadStatistics();
@@ -1592,10 +1626,11 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
                     description: "Liste des plans actualisée",
                 });
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de rafraîchir les plans",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -1761,7 +1796,7 @@ const StatCard = ({
 }: {
     title: string;
     value: number;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     description?: string;
     variant?: "default" | "destructive";
 }) => (

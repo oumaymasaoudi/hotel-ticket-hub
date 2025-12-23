@@ -24,7 +24,6 @@ export const TicketImageUpload = ({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState(existingImages);
-  const [uploadingFiles, setUploadingFiles] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setImages(existingImages);
@@ -69,7 +68,7 @@ export const TicketImageUpload = ({
     setUploading(true);
     try {
       const response = await apiService.addImagesToTicket(ticketId, files);
-      
+
       // Mettre à jour les images existantes
       if (response.images) {
         setImages(response.images);
@@ -139,7 +138,7 @@ export const TicketImageUpload = ({
           // Extraire le nom de fichier du chemin de stockage
           const fileName = image.storage_path.split(/[/\\]/).pop() || image.file_name;
           const imageUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/tickets/images/${fileName}`;
-          
+
           return (
             <div key={image.id || index} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
               <img

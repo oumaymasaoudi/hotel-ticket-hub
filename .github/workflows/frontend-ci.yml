@@ -166,13 +166,20 @@ jobs:
       - name: Run tests with coverage
         run: npm test -- --coverage --watchAll=false
 
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
+      - name: Verify coverage report exists
+        run: |
+          if [ ! -f "coverage/lcov.info" ]; then
+            echo "ERROR: Coverage report not found!"
+            exit 1
+          else
+            echo "Coverage report found: coverage/lcov.info"
+            ls -lh coverage/lcov.info
+          fi
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          projectBaseDir: .
         continue-on-error: true
 

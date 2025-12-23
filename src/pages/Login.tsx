@@ -93,7 +93,7 @@ const Login = () => {
             <span className="text-3xl font-serif font-bold text-foreground">TicketHotel</span>
           </div>
           <div className="flex items-center gap-1 mb-4">
-            {[...Array(5)].map((_, i) => (
+            {[...new Array(5)].map((_, i) => (
               <Star key={i} className="h-4 w-4 fill-secondary text-secondary" />
             ))}
           </div>

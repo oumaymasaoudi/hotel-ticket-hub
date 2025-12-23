@@ -83,12 +83,12 @@ export function DashboardLayout({
         <AppSidebar role={role} />
         <div className="flex-1 flex flex-col relative">
           {/* Background Image */}
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed opacity-20"
             style={{ backgroundImage: `url(${luxuryLightBg})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/95" />
-          
+
           {/* Content */}
           <header className="relative h-16 border-b border-border/50 bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 gap-4 shadow-sm">
             <div className="flex items-center gap-4">
@@ -108,7 +108,7 @@ export function DashboardLayout({
                 <div className="flex items-center gap-3">
                   <h1 className="text-xl font-serif font-semibold text-primary">{title}</h1>
                   <div className="flex items-center gap-0.5">
-                    {[...Array(5)].map((_, i) => (
+                    {[...new Array(5)].map((_, i) => (
                       <Star key={i} className="h-3 w-3 fill-secondary text-secondary" />
                     ))}
                   </div>
@@ -197,7 +197,7 @@ export function DashboardLayout({
                   <Moon className="h-4 w-4" />
                 )}
               </Button>
-              
+
               {user && (
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle className="h-4 w-4 text-green-500" />

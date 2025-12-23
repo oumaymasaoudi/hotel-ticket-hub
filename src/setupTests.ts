@@ -2,5 +2,8 @@
 import '@testing-library/jest-dom';
 
 // Mock API_BASE_URL for Jest
-(globalThis as any).__API_BASE_URL__ = 'http://localhost:8080/api';
+interface GlobalWithAPI {
+  __API_BASE_URL__?: string;
+}
+(globalThis as unknown as GlobalWithAPI).__API_BASE_URL__ = 'http://localhost:8080/api';
 

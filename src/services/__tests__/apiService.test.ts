@@ -2,7 +2,10 @@ import { apiService } from '../apiService';
 
 // Mock fetch
 const mockFetch = jest.fn();
-(globalThis as any).fetch = mockFetch;
+interface GlobalWithFetch {
+  fetch: typeof fetch;
+}
+(globalThis as unknown as GlobalWithFetch).fetch = mockFetch as typeof fetch;
 
 describe('apiService', () => {
     beforeEach(() => {
