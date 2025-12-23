@@ -15,9 +15,9 @@ export function PublicHeader({ showBackButton = false, showLoginButton = true }:
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           {showBackButton && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => navigate(-1)}
               className="text-primary-foreground hover:bg-primary-foreground/10"
             >
@@ -33,7 +33,7 @@ export function PublicHeader({ showBackButton = false, showLoginButton = true }:
             <div className="flex flex-col">
               <span className="text-2xl font-serif font-bold text-primary-foreground">TicketHotel</span>
               <div className="flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => (
+                {[...new Array(5)].map((_, i) => (
                   <Star key={i} className="h-2.5 w-2.5 fill-secondary text-secondary" />
                 ))}
               </div>
@@ -41,8 +41,8 @@ export function PublicHeader({ showBackButton = false, showLoginButton = true }:
           </div>
         </div>
         {showLoginButton && (
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => navigate("/login")}
             className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground transition-all"
           >

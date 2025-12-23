@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiService, AuthResponse } from "@/services/apiService";
+import { AuthResponse } from "@/services/apiService";
 
 export type UserRole = "client" | "technician" | "admin" | "superadmin";
 
@@ -43,10 +43,10 @@ export const useAuth = (): UserWithRole => {
     checkAuth();
 
     // Écouter l'événement custom émis après login
-    window.addEventListener('auth-change', checkAuth);
+    globalThis.addEventListener('auth-change', checkAuth);
 
     return () => {
-      window.removeEventListener('auth-change', checkAuth);
+      globalThis.removeEventListener('auth-change', checkAuth);
     };
   }, []);
 

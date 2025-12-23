@@ -19,12 +19,8 @@ import {
     AlertTriangle,
     CheckCircle,
     Clock,
-    Wrench,
-    TrendingUp,
     Users,
-    DollarSign,
     FileText,
-    Settings,
     Eye,
     UserPlus,
     ArrowUp,
@@ -34,11 +30,9 @@ import {
     CreditCard,
     Star,
     Crown,
-    Zap,
-    ChevronDown
+    Zap
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -76,7 +70,7 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(false);
     const [loadingTechnicians, setLoadingTechnicians] = useState(false);
     const [loadingSubscription, setLoadingSubscription] = useState(false);
-    const [filter, setFilter] = useState("");
+    const [filter] = useState("");
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState<TicketResponse | null>(null);
     const [assigning, setAssigning] = useState(false);

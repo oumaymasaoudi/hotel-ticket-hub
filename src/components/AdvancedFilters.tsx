@@ -13,10 +13,10 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface AdvancedFiltersProps {
-  onFilterChange: (filters: FilterState) => void;
-  categories?: Array<{ id: string; name: string; color: string }>;
-  technicians?: Array<{ id: string; fullName: string }>;
-  statuses?: string[];
+  readonly onFilterChange: (filters: FilterState) => void;
+  readonly categories?: Array<{ id: string; name: string; color: string }>;
+  readonly technicians?: Array<{ id: string; fullName: string }>;
+  readonly statuses?: string[];
 }
 
 export interface FilterState {
@@ -44,8 +44,6 @@ export function AdvancedFilters({
     dateTo: null,
     isUrgent: null,
   });
-
-  const [isOpen, setIsOpen] = useState(false);
 
   const updateFilter = (key: keyof FilterState, value: FilterState[keyof FilterState]) => {
     const newFilters = { ...filters, [key]: value };

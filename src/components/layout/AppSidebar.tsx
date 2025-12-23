@@ -20,8 +20,6 @@ import {
   Hotel,
   TicketCheck,
   Plus,
-  Clock,
-  CheckCircle,
   Users,
   Settings,
   CreditCard,
@@ -141,7 +139,7 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
             <div className="flex flex-col">
               <span className="text-lg font-serif font-bold text-white">TicketHotel</span>
               <div className="flex items-center gap-1 mb-1">
-                {[...Array(5)].map((_, i) => (
+                {[...new Array(5)].map((_, i) => (
                   <Star key={i} className="h-2 w-2 fill-sidebar-primary text-sidebar-primary" />
                 ))}
               </div>
