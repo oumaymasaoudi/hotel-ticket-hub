@@ -42,20 +42,19 @@ describe('TicketTemplates', () => {
     it('opens dialog when new template button is clicked', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        const newButton = screen.getByText('Nouveau template');
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
         fireEvent.click(newButton);
 
         await waitFor(() => {
-            // Dialog title should appear (there are two "Nouveau template" texts - button and dialog title)
-            // Check for dialog description to ensure dialog is open
-            expect(screen.getByText('Créez un template pour accélérer la création de tickets récurrents')).toBeInTheDocument();
-        }, { timeout: 3000 });
+            // Check for dialog title instead of button text to avoid ambiguity
+            expect(screen.getByRole('heading', { name: 'Nouveau template' })).toBeInTheDocument();
+        });
     });
 
     it('saves new template when form is filled', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        const newButton = screen.getByText('Nouveau template');
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
         fireEvent.click(newButton);
 
         await waitFor(() => {
@@ -67,7 +66,7 @@ describe('TicketTemplates', () => {
 
             const saveButton = screen.getByText('Créer');
             fireEvent.click(saveButton);
-        }, { timeout: 3000 });
+        });
 
         expect(mockToast).toHaveBeenCalledWith({
             title: 'Succès',
@@ -78,13 +77,13 @@ describe('TicketTemplates', () => {
     it('shows error when saving template without required fields', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        const newButton = screen.getByText('Nouveau template');
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
         fireEvent.click(newButton);
 
         await waitFor(() => {
             const saveButton = screen.getByText('Créer');
             fireEvent.click(saveButton);
-        }, { timeout: 3000 });
+        });
 
         expect(mockToast).toHaveBeenCalledWith({
             title: 'Erreur',
@@ -96,19 +95,17 @@ describe('TicketTemplates', () => {
     it('opens edit dialog when edit button is clicked', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        // Find edit button by looking for buttons with Edit icon
-        const buttons = screen.getAllByRole('button');
-        const editButton = buttons.find(btn => {
-            const svg = btn.querySelector('svg');
-            return svg && btn.getAttribute('class')?.includes('h-6') && !btn.getAttribute('class')?.includes('text-destructive');
-        });
+        const editButtons = screen.getAllByRole('button');
+        const editButton = editButtons.find(btn =>
+            btn.querySelector('svg') && btn.getAttribute('class')?.includes('h-6')
+        );
 
         if (editButton) {
             fireEvent.click(editButton);
 
             await waitFor(() => {
                 expect(screen.getByText('Modifier le template')).toBeInTheDocument();
-            }, { timeout: 3000 });
+            });
         }
     });
 
@@ -138,19 +135,40 @@ describe('TicketTemplates', () => {
 
         render(<TicketTemplates {...defaultProps} categories={categories} />);
 
-        const newButton = screen.getByText('Nouveau template');
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
         fireEvent.click(newButton);
 
         await waitFor(() => {
             const categorySelect = screen.getByText('Sélectionner une catégorie').closest('select');
             expect(categorySelect).toBeInTheDocument();
-        }, { timeout: 3000 });
+        });
+    });
+
+    it('handles category selection change (covers line 240)', async () => {
+        const categories = [
+            { id: '1', name: 'Plomberie' },
+            { id: '2', name: 'Électricité' },
+        ];
+
+        render(<TicketTemplates {...defaultProps} categories={categories} />);
+
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
+        fireEvent.click(newButton);
+
+        await waitFor(() => {
+            const categorySelect = screen.getByLabelText('Catégorie') as HTMLSelectElement;
+            expect(categorySelect).toBeInTheDocument();
+
+            // Test onChange handler (line 240)
+            fireEvent.change(categorySelect, { target: { value: '1' } });
+            expect(categorySelect.value).toBe('1');
+        });
     });
 
     it('handles urgent checkbox', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        const newButton = screen.getByText('Nouveau template');
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
         fireEvent.click(newButton);
 
         await waitFor(() => {
@@ -158,35 +176,34 @@ describe('TicketTemplates', () => {
             fireEvent.click(urgentCheckbox);
 
             expect(urgentCheckbox).toBeChecked();
-        }, { timeout: 3000 });
+        });
     });
 
     it('cancels dialog when cancel button is clicked', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        const newButton = screen.getByText('Nouveau template');
+        const newButton = screen.getByRole('button', { name: /nouveau template/i });
         fireEvent.click(newButton);
 
         await waitFor(() => {
             const cancelButton = screen.getByText('Annuler');
             fireEvent.click(cancelButton);
-        }, { timeout: 3000 });
+        });
 
         await waitFor(() => {
-            // Dialog should be closed - check that description is not visible
-            expect(screen.queryByText('Créez un template pour accélérer la création de tickets récurrents')).not.toBeInTheDocument();
-        }, { timeout: 3000 });
+            // Check that dialog content is no longer present (not the button which is always visible)
+            expect(screen.queryByPlaceholderText('Ex: Problème de plomberie')).not.toBeInTheDocument();
+            expect(screen.queryByRole('heading', { name: 'Nouveau template' })).not.toBeInTheDocument();
+        });
     });
 
     it('updates template when editing', async () => {
         render(<TicketTemplates {...defaultProps} />);
 
-        // Find edit button
-        const buttons = screen.getAllByRole('button');
-        const editButton = buttons.find(btn => {
-            const svg = btn.querySelector('svg');
-            return svg && btn.getAttribute('class')?.includes('h-6') && !btn.getAttribute('class')?.includes('text-destructive');
-        });
+        const editButtons = screen.getAllByRole('button');
+        const editButton = editButtons.find(btn =>
+            btn.querySelector('svg') && btn.getAttribute('class')?.includes('h-6')
+        );
 
         if (editButton) {
             fireEvent.click(editButton);
@@ -197,7 +214,7 @@ describe('TicketTemplates', () => {
 
                 const saveButton = screen.getByText('Modifier');
                 fireEvent.click(saveButton);
-            }, { timeout: 3000 });
+            });
 
             expect(mockToast).toHaveBeenCalledWith({
                 title: 'Succès',

@@ -1,8 +1,8 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useNotifications } from '../useNotifications';
-import { useAuth } from '../useAuth';
+import { useAuth, type UserRole } from '../useAuth';
 import { useToast } from '../use-toast';
-import { apiService } from '@/services/apiService';
+import { apiService, type TicketResponse } from '@/services/apiService';
 
 jest.mock('../useAuth');
 jest.mock('../use-toast');
@@ -15,7 +15,6 @@ const mockApiService = apiService as jest.Mocked<typeof apiService>;
 describe('useNotifications', () => {
     const mockToast = jest.fn();
     const mockUser = {
-        id: 'user-1',
         email: 'test@example.com',
         fullName: 'Test User',
         userId: 'user-1',
@@ -28,10 +27,12 @@ describe('useNotifications', () => {
         jest.useRealTimers();
 
         mockUseAuth.mockReturnValue({
-            user: mockUser as any,
+            user: mockUser,
+            session: { token: 'test-token' },
+            role: 'admin' as UserRole,
             hotelId: mockHotelId,
             loading: false,
-        } as any);
+        });
 
         mockUseToast.mockReturnValue({
             toast: mockToast,
@@ -65,7 +66,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications(30000));
 
@@ -90,7 +91,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications(100));
 
@@ -124,7 +125,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 
@@ -167,7 +168,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 
@@ -199,7 +200,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 
@@ -231,7 +232,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 
@@ -254,9 +255,11 @@ describe('useNotifications', () => {
     it('does not poll when user is not available', () => {
         mockUseAuth.mockReturnValue({
             user: null,
+            session: null,
+            role: null,
             hotelId: null,
             loading: false,
-        } as any);
+        });
 
         renderHook(() => useNotifications());
 
@@ -301,8 +304,8 @@ describe('useNotifications', () => {
     });
 
     it('does not poll when isPolling is true', async () => {
-        let resolveFirstCall: (value: any[]) => void;
-        const firstCallPromise = new Promise<any[]>(resolve => {
+        let resolveFirstCall: (value: TicketResponse[]) => void;
+        const firstCallPromise = new Promise<TicketResponse[]>(resolve => {
             resolveFirstCall = resolve;
         });
 
@@ -343,7 +346,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(normalTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(normalTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 
@@ -369,7 +372,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications(100));
 
@@ -429,7 +432,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 
@@ -470,10 +473,12 @@ describe('useNotifications', () => {
 
     it('does not poll when hotelId is missing', () => {
         mockUseAuth.mockReturnValue({
-            user: mockUser as any,
+            user: mockUser,
+            session: { token: 'test-token' },
+            role: 'admin' as UserRole,
             hotelId: null,
             loading: false,
-        } as any);
+        });
 
         renderHook(() => useNotifications());
 
@@ -483,9 +488,11 @@ describe('useNotifications', () => {
     it('does not poll when user is missing but hotelId exists', () => {
         mockUseAuth.mockReturnValue({
             user: null,
+            session: null,
+            role: null,
             hotelId: mockHotelId,
             loading: false,
-        } as any);
+        });
 
         renderHook(() => useNotifications());
 
@@ -504,7 +511,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(urgentTickets as TicketResponse[]);
 
         renderHook(() => useNotifications());
 
@@ -556,7 +563,7 @@ describe('useNotifications', () => {
             },
         ];
 
-        mockApiService.getTicketsByHotel.mockResolvedValue(mixedTickets as any);
+        mockApiService.getTicketsByHotel.mockResolvedValue(mixedTickets as TicketResponse[]);
 
         const { result } = renderHook(() => useNotifications());
 

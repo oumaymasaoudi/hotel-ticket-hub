@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useToast, toast, reducer } from '../use-toast';
+import type { ToasterToast } from '../use-toast';
 
 describe('useToast', () => {
     beforeEach(() => {
@@ -66,7 +67,7 @@ describe('useToast', () => {
         const { result } = renderHook(() => useToast());
 
         let toastId: string;
-        let updateFn: (props: any) => void;
+        let updateFn: (props: ToasterToast) => void;
 
         act(() => {
             const toastResult = result.current.toast({
@@ -382,7 +383,7 @@ describe('useToast', () => {
         const { result } = renderHook(() => useToast());
 
         let toastId: string;
-        let updateFn: (props: any) => void;
+        let updateFn: (props: ToasterToast) => void;
 
         act(() => {
             const toastResult = result.current.toast({
@@ -410,7 +411,7 @@ describe('useToast', () => {
 
         let toastId1: string;
         let toastId2: string;
-        let updateFn1: (props: any) => void;
+        let updateFn1: (props: ToasterToast) => void;
 
         act(() => {
             const toast1 = result.current.toast({ title: 'Toast 1' });
@@ -725,7 +726,7 @@ describe('useToast', () => {
         const { result } = renderHook(() => useToast());
 
         let standaloneToastId: string;
-        let updateFn: (props: any) => void;
+        let updateFn: (props: ToasterToast) => void;
 
         act(() => {
             const toastResult = toast({ title: 'Standalone' });
@@ -755,7 +756,7 @@ describe('useToast', () => {
             toasts: [
                 { id: '1', title: 'Toast 1', open: true },
                 { id: '2', title: 'Toast 2', open: true },
-            ] as any,
+            ] as ToasterToast[],
         };
 
         const action = {
