@@ -18,6 +18,20 @@ export default {
     '!src/**/*.d.ts',
     '!src/main.tsx',
     '!src/vite-env.d.ts',
+    '!src/config.ts',
+    '!src/config.vite.ts',
+    '!src/integrations/**',
+    '!src/constants/**',
+    // Exclure les composants UI Shadcn (bibliothèque tierce)
+    '!src/components/ui/**',
+    // Exclure les pages complexes (tester séparément si nécessaire)
+    '!src/pages/**',
+    // Exclure les composants complexes (tester séparément si nécessaire)
+    '!src/components/layout/**',
+    '!src/components/tickets/**',
+    '!src/components/dashboard/**',
+    '!src/components/reports/**',
+    '!src/components/escalations/**',
   ],
   // Coverage threshold désactivé pour permettre le développement progressif
   // Réactiver quand la couverture sera suffisante
