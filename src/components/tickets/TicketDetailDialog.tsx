@@ -109,7 +109,7 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
 
   if (!ticket) return null;
 
-  const slaDeadline = ticket.slaDeadline || ticket.sla_deadline;
+  const slaDeadline = ticket.slaDeadline;
   const status = (ticket.status || "").toString();
   const slaRemaining = slaDeadline
     ? formatDistanceToNow(new Date(slaDeadline), { locale: fr, addSuffix: true })
@@ -122,7 +122,7 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <span>{ticket.ticketNumber || ticket.ticket_number}</span>
+            <span>{ticket.ticketNumber}</span>
             <Badge className={statusColors[status.toLowerCase()] || statusColors.open}>
               {statusLabels[status.toLowerCase()] || status}
             </Badge>
@@ -139,25 +139,25 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               <div className="flex items-center gap-2">
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Catégorie:</span>
-                <span className="font-medium">{ticket.categoryName || ticket.categories?.name}</span>
+                <span className="font-medium">{ticket.categoryName}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Créé:</span>
                 <span className="font-medium">
-                  {format(new Date(ticket.createdAt || ticket.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
+                  {format(new Date(ticket.createdAt), "dd/MM/yyyy HH:mm", { locale: fr })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Client:</span>
-                <span className="font-medium">{ticket.clientEmail || ticket.client_email}</span>
+                <span className="font-medium">{ticket.clientEmail}</span>
               </div>
-              {(ticket.clientPhone || ticket.client_phone) && (
+              {ticket.clientPhone && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Tél:</span>
-                  <span className="font-medium">{ticket.clientPhone || ticket.client_phone}</span>
+                  <span className="font-medium">{ticket.clientPhone}</span>
                 </div>
               )}
             </div>
@@ -199,13 +199,13 @@ export const TicketDetailDialog = ({ ticket, open, onOpenChange }: TicketDetailD
               <User className="h-4 w-4" />
               Technicien assigné
             </h4>
-            {ticket.assignedTechnicianName || ticket.profiles?.full_name ? (
+            {ticket.assignedTechnicianName ? (
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
                   <User className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">{ticket.assignedTechnicianName || ticket.profiles?.full_name}</p>
+                  <p className="font-medium">{ticket.assignedTechnicianName}</p>
                   <p className="text-sm text-muted-foreground">Technicien actif</p>
                 </div>
               </div>
