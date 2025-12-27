@@ -46,7 +46,9 @@ describe('PaginationControls', () => {
         render(<PaginationControls {...defaultProps} currentPage={2} />);
 
         const prevButton = screen.getByText('Précédent').closest('button');
-        fireEvent.click(prevButton!);
+        if (prevButton) {
+            fireEvent.click(prevButton);
+        }
 
         expect(mockOnPageChange).toHaveBeenCalledWith(1);
     });
@@ -55,7 +57,9 @@ describe('PaginationControls', () => {
         render(<PaginationControls {...defaultProps} currentPage={1} />);
 
         const nextButton = screen.getByText('Suivant').closest('button');
-        fireEvent.click(nextButton!);
+        if (nextButton) {
+            fireEvent.click(nextButton);
+        }
 
         expect(mockOnPageChange).toHaveBeenCalledWith(2);
     });
@@ -143,13 +147,13 @@ describe('PaginationControls', () => {
         // Find the select trigger button by role before clicking
         const itemsPerPageSelect = screen.getByRole('combobox');
         expect(itemsPerPageSelect).toHaveTextContent('5');
-        
+
         fireEvent.click(itemsPerPageSelect);
-        
+
         // Wait for the dropdown to open and options to appear
         // Check for option 15 which should only appear in the dropdown (not in pagination)
         await screen.findByText('15', {}, { timeout: 3000 });
-        
+
         // Verify all custom options are present in the dropdown
         // We check for 15 and 25 which should only be in the dropdown
         expect(screen.getByText('15')).toBeInTheDocument();

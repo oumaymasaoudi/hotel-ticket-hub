@@ -330,7 +330,9 @@ describe('useNotifications', () => {
         expect(mockApiService.getTicketsByHotel).toHaveBeenCalledTimes(firstCallCount);
 
         // Resolve the first call
-        resolveFirstCall!([]);
+        if (resolveFirstCall) {
+            resolveFirstCall([]);
+        }
         await firstCallPromise;
     });
 

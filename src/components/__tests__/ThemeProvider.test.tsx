@@ -1,4 +1,4 @@
-import { render, screen, renderHook } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ThemeProvider, useTheme } from '../ThemeProvider';
 import { act } from 'react';
 

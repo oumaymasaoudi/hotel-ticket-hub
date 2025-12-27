@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { AdvancedFilters, FilterState } from '../AdvancedFilters';
+import { AdvancedFilters } from '../AdvancedFilters';
 
 describe('AdvancedFilters', () => {
     const mockOnFilterChange = jest.fn();
@@ -208,7 +208,7 @@ describe('AdvancedFilters', () => {
         await waitFor(() => {
             const calendar = screen.getByRole('grid');
             expect(calendar).toBeInTheDocument();
-            
+
             // Click on a date (first available date button)
             const dateButtons = calendar.querySelectorAll('button');
             if (dateButtons.length > 0) {
@@ -232,7 +232,7 @@ describe('AdvancedFilters', () => {
         await waitFor(() => {
             const calendar = screen.getByRole('grid');
             expect(calendar).toBeInTheDocument();
-            
+
             // Click on a date (first available date button)
             const dateButtons = calendar.querySelectorAll('button');
             if (dateButtons.length > 0) {

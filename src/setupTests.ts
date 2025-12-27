@@ -8,7 +8,7 @@ interface GlobalWithAPI {
 (globalThis as unknown as GlobalWithAPI).__API_BASE_URL__ = 'http://localhost:8080/api';
 
 // Mock window.matchMedia for components that use it (e.g., sonner, theme providers)
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(globalThis, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation((query: string) => ({
     matches: false,

@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useToast, toast, reducer } from '../use-toast';
 import type { ToasterToast } from '../use-toast';
 
@@ -96,13 +96,11 @@ describe('useToast', () => {
     it('dismisses a specific toast', () => {
         const { result } = renderHook(() => useToast());
 
-        let toastId1: string;
         let toastId2: string;
 
         act(() => {
-            const toast1 = result.current.toast({ title: 'Toast 1' });
+            result.current.toast({ title: 'Toast 1' });
             const toast2 = result.current.toast({ title: 'Toast 2' });
-            toastId1 = toast1.id;
             toastId2 = toast2.id;
         });
 
@@ -409,14 +407,12 @@ describe('useToast', () => {
     it('handles UPDATE_TOAST when toast id does not match (covers branch line 82)', () => {
         const { result } = renderHook(() => useToast());
 
-        let toastId1: string;
         let toastId2: string;
         let updateFn1: (props: ToasterToast) => void;
 
         act(() => {
             const toast1 = result.current.toast({ title: 'Toast 1' });
             const toast2 = result.current.toast({ title: 'Toast 2' });
-            toastId1 = toast1.id;
             toastId2 = toast2.id;
             updateFn1 = toast1.update;
         });
@@ -566,12 +562,14 @@ describe('useToast', () => {
     it('genId generates sequential IDs', () => {
         const { result } = renderHook(() => useToast());
 
-        const ids: string[] = [];
+        let ids: string[] = [];
 
         act(() => {
-            ids.push(result.current.toast({ title: '1' }).id);
-            ids.push(result.current.toast({ title: '2' }).id);
-            ids.push(result.current.toast({ title: '3' }).id);
+            ids = [
+                result.current.toast({ title: '1' }).id,
+                result.current.toast({ title: '2' }).id,
+                result.current.toast({ title: '3' }).id
+            ];
         });
 
         // IDs should be different

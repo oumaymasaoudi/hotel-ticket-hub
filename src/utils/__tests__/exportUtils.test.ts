@@ -36,12 +36,12 @@ describe('exportUtils', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         // Mock URL.createObjectURL
-        global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
-        global.URL.revokeObjectURL = jest.fn();
+        globalThis.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
+        globalThis.URL.revokeObjectURL = jest.fn();
         // Mock window.open
-        global.window.open = jest.fn();
+        globalThis.window.open = jest.fn();
         // Mock document.createElement
-        global.document.createElement = jest.fn((tag: string) => {
+        globalThis.document.createElement = jest.fn((tag: string) => {
             if (tag === 'a') {
                 return {
                     href: '',
@@ -53,8 +53,8 @@ describe('exportUtils', () => {
             }
             return document.createElement(tag);
         });
-        global.document.body.appendChild = jest.fn();
-        global.document.body.removeChild = jest.fn();
+        globalThis.document.body.appendChild = jest.fn();
+        globalThis.document.body.removeChild = jest.fn();
     });
 
     describe('exportToCSV', () => {
@@ -66,7 +66,7 @@ describe('exportUtils', () => {
 
             exportToCSV(data, 'test.csv');
 
-            expect(global.document.createElement).toHaveBeenCalledWith('a');
+            expect(globalThis.document.createElement).toHaveBeenCalledWith('a');
         });
 
         it('should throw error for empty data', () => {
@@ -80,7 +80,7 @@ describe('exportUtils', () => {
             ];
 
             exportToCSV(data, 'test.csv');
-            expect(global.document.createElement).toHaveBeenCalledWith('a');
+            expect(globalThis.document.createElement).toHaveBeenCalledWith('a');
         });
     });
 
@@ -484,16 +484,18 @@ describe('exportUtils', () => {
                 updatedAt: new Date().toISOString()
             };
 
+            // Extract function to reduce nesting
+            const createMockSplitTextToSize = () => {
+                return Array.from({ length: 100 }, () => 'A'.repeat(50));
+            };
+
             const mockDoc = {
                 text: jest.fn(),
                 save: jest.fn(),
                 setFontSize: jest.fn(),
                 setFont: jest.fn(),
                 addPage: jest.fn(),
-                splitTextToSize: jest.fn((text: string) => {
-                    // Return many lines to trigger page break
-                    return Array.from({ length: 100 }, () => 'A'.repeat(50));
-                }),
+                splitTextToSize: jest.fn(createMockSplitTextToSize),
                 internal: {
                     pageSize: {
                         getWidth: jest.fn(() => 210),
@@ -543,7 +545,7 @@ describe('exportUtils', () => {
             ];
 
             exportToCSV(data, 'test.csv');
-            expect(global.document.createElement).toHaveBeenCalledWith('a');
+            expect(globalThis.document.createElement).toHaveBeenCalledWith('a');
         });
 
         it('should handle numeric values in CSV', () => {
@@ -552,7 +554,7 @@ describe('exportUtils', () => {
             ];
 
             exportToCSV(data, 'test.csv');
-            expect(global.document.createElement).toHaveBeenCalledWith('a');
+            expect(globalThis.document.createElement).toHaveBeenCalledWith('a');
         });
 
         it('should handle boolean values in CSV', () => {
@@ -561,7 +563,7 @@ describe('exportUtils', () => {
             ];
 
             exportToCSV(data, 'test.csv');
-            expect(global.document.createElement).toHaveBeenCalledWith('a');
+            expect(globalThis.document.createElement).toHaveBeenCalledWith('a');
         });
     });
 
@@ -650,7 +652,7 @@ describe('exportUtils', () => {
             };
 
             generatePerformanceReportCSV(reportData, 'performance.csv');
-            expect(global.document.createElement).toHaveBeenCalledWith('a');
+            expect(globalThis.document.createElement).toHaveBeenCalledWith('a');
         });
 
         it('should throw error when no data available', () => {
