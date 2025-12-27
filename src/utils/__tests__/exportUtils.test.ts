@@ -484,18 +484,13 @@ describe('exportUtils', () => {
                 updatedAt: new Date().toISOString()
             };
 
-            // Extract function to reduce nesting
-            const createMockSplitTextToSize = () => {
-                return Array.from({ length: 100 }, () => 'A'.repeat(50));
-            };
-
             const mockDoc = {
                 text: jest.fn(),
                 save: jest.fn(),
                 setFontSize: jest.fn(),
                 setFont: jest.fn(),
                 addPage: jest.fn(),
-                splitTextToSize: jest.fn(createMockSplitTextToSize),
+                splitTextToSize: jest.fn(() => Array.from({ length: 100 }, () => 'A'.repeat(50))),
                 internal: {
                     pageSize: {
                         getWidth: jest.fn(() => 210),
