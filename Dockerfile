@@ -8,8 +8,14 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy source code (explicitly exclude sensitive files via .dockerignore)
+# .dockerignore already excludes: .env, .git, node_modules, etc.
+COPY src/ ./src/
+COPY public/ ./public/
+COPY index.html ./
+COPY vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json ./
+COPY tailwind.config.js postcss.config.js ./
+COPY .eslintrc.cjs ./
 
 # Build argument for API URL
 ARG VITE_API_BASE_URL=http://13.49.44.219:8081/api
@@ -26,6 +32,12 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Note: nginx:alpine runs as root by default to bind port 80 (<1024)
+# This is standard practice for nginx containers. The nginx process
+# itself drops privileges after binding the port. For production,
+# consider using a reverse proxy (e.g., Traefik, Caddy) that handles
+# port binding and forwards to nginx on a higher port.
 
 # Expose port 80
 EXPOSE 80

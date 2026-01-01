@@ -7,6 +7,7 @@ dist
 !README.md
 .env
 .env.local
+.env.*
 coverage
 .vscode
 .DS_Store
@@ -14,4 +15,18 @@ coverage
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+# Exclude sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+github-actions-key
+*secret*
+*private*
+# Exclude test files
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
 
