@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { AppFooter } from "@/components/layout/AppFooter";
 import { Hotel, TicketCheck, Eye, Users, Building2, Clock, CheckCircle, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import luxuryBg from "@/assets/luxury-hotel-bg.jpg";
@@ -8,11 +9,11 @@ const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <PublicHeader />
 
       {/* Hero Section with Luxury Background */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden pt-20">
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -171,15 +172,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 bg-primary text-primary-foreground/70 text-center">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Hotel className="h-6 w-6 text-secondary" />
-            <span className="text-xl font-serif font-bold text-primary-foreground">TicketHotel</span>
-          </div>
-          <p className="text-sm">© 2025 TicketHotel. Tous droits réservés.</p>
-        </div>
-      </footer>
+      <AppFooter />
     </div>
   );
 };

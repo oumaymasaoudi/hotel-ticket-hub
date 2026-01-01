@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoryCard } from "@/components/CategoryCard";
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { AppFooter } from "@/components/layout/AppFooter";
 import { TicketImageUpload } from "@/components/tickets/TicketImageUpload";
 import { ArrowLeft, ArrowRight, Check, Copy, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -129,10 +130,10 @@ const CreateTicket = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex flex-col">
       <PublicHeader showBackButton showLoginButton={false} />
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="container mx-auto px-4 py-8 max-w-4xl flex-1 pt-20">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             {[1, 2, 3, 4].map((s) => (
@@ -346,6 +347,7 @@ const CreateTicket = () => {
           )}
         </Card>
       </main>
+      <AppFooter />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { AppFooter } from "@/components/layout/AppFooter";
 import { Search, Download, CheckCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -132,10 +133,10 @@ const TrackTicket = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-accent to-background flex flex-col">
       <PublicHeader showBackButton />
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-4 py-8 max-w-2xl flex-1 pt-20">
         <Card className="p-6 md:p-8">
           <div className="space-y-6">
             <div>
@@ -280,6 +281,7 @@ const TrackTicket = () => {
           </div>
         </Card>
       </main>
+      <AppFooter />
     </div>
   );
 };

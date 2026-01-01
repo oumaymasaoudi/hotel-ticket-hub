@@ -482,6 +482,24 @@ export const apiService = {
     return response.json();
   },
 
+  async deleteTicketImage(ticketId: string, imageId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/images/${imageId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token');
+      window.location.assign('/login');
+      throw new Error('Session expirée');
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to delete image' }));
+      throw new Error(error.message || error.error || 'Failed to delete image');
+    }
+  },
+
   async getTicketByNumber(ticketNumber: string): Promise<TicketResponse> {
     const response = await fetch(`${API_BASE_URL}/tickets/public/${ticketNumber}`);
 

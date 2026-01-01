@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiService } from "@/services/apiService";
+import { AppFooter } from "@/components/layout/AppFooter";
 import luxuryBg from "@/assets/luxury-hotel-bg.jpg";
 
 const Login = () => {
@@ -77,7 +78,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
       {/* Background */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -173,6 +175,8 @@ const Login = () => {
           </div>
         </div>
       </Card>
+      </div>
+      <AppFooter />
     </div>
   );
 };
