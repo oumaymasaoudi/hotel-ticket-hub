@@ -3,8 +3,8 @@
 ## ⚠️ Problème Actuel
 
 Vous essayez de vous connecter avec la clé AWS mais ça échoue :
-```
-ubuntu@51.21.196.104: Permission denied (publickey).
+```bash
+ubuntu@<STAGING_VM_IP>: Permission denied (publickey).
 ```
 
 ## ✅ Solution en 2 étapes
