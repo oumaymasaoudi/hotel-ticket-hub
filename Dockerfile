@@ -34,19 +34,29 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Note: nginx:alpine runs as root by default to bind port 80 (<1024)
-# This is standard practice for nginx containers. The nginx process
-# itself drops privileges after binding the port. For production,
-# consider using a reverse proxy (e.g., Traefik, Caddy) that handles
-# port binding and forwards to nginx on a higher port.
+# Change ownership of nginx directories to nginx user (non-root)
+# The nginx:alpine image already has a 'nginx' user (UID 101)
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    chmod -R 755 /usr/share/nginx/html && \
+    chmod -R 755 /var/cache/nginx && \
+    chmod -R 755 /var/log/nginx && \
+    chmod -R 755 /etc/nginx/conf.d
 
-# Expose port 80
-EXPOSE 80
+# Switch to non-root user (nginx user already exists in nginx:alpine)
+USER nginx
+
+# Expose port 8080 (non-privileged port)
+# Note: In production, use a reverse proxy (Traefik, Caddy, etc.) 
+# that binds to port 80 and forwards to this container on port 8080
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Start nginx
+# Start nginx as non-root user
 CMD ["nginx", "-g", "daemon off;"]
 
