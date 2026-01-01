@@ -247,7 +247,7 @@ const AdminDashboard = () => {
 
         // Filtrage par catégorie du ticket (si un ticket est sélectionné)
         // Les spécialités des techniciens contiennent maintenant les noms des catégories
-        if (selectedTicket && selectedTicket.categoryName) {
+        if (selectedTicket?.categoryName) {
             const ticketCategoryName = selectedTicket.categoryName.trim();
 
             // Filtrer les techniciens qui ont cette catégorie dans leurs spécialités

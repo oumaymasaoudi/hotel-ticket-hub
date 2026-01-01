@@ -72,9 +72,11 @@ const Signup = () => {
         setCategories(data);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Impossible de charger la liste des catégories";
+      console.error("Error fetching categories:", errorMessage, error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger la liste des catégories",
+        description: errorMessage,
         variant: "destructive",
       });
     }

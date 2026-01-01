@@ -31,19 +31,33 @@ FROM nginx:alpine
 # Copy built files from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
+# Copy nginx configurations
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-main.conf /etc/nginx/nginx.conf
 
-# Change ownership of nginx directories to nginx user (non-root)
-# The nginx:alpine image already has a 'nginx' user (UID 101)
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
+# Copy custom entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Create nginx pid directory and set permissions for non-root user
+# Must be done as root before switching to nginx user
+RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp \
+    /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp \
+    /var/cache/nginx/scgi_temp /var/run/nginx && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d && \
+    chown -R nginx:nginx /var/run/nginx && \
+    chown -R nginx:nginx /etc/nginx/nginx.conf && \
     chmod -R 755 /usr/share/nginx/html && \
     chmod -R 755 /var/cache/nginx && \
     chmod -R 755 /var/log/nginx && \
-    chmod -R 755 /etc/nginx/conf.d
+    chmod -R 755 /etc/nginx/conf.d && \
+    chmod -R 755 /var/run/nginx && \
+    # Verify nginx.conf has correct pid path
+    grep -q "pid /var/run/nginx/nginx.pid" /etc/nginx/nginx.conf || \
+    (echo "ERROR: nginx.conf pid path not set correctly" && exit 1)
 
 # Switch to non-root user (nginx user already exists in nginx:alpine)
 USER nginx
@@ -57,6 +71,6 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Start nginx as non-root user
-CMD ["nginx", "-g", "daemon off;"]
+# Use custom entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
