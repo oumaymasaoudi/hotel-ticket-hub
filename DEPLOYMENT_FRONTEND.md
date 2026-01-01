@@ -113,7 +113,7 @@ networks:
 
 Créez `.dockerignore` dans `hotel-ticket-hub/` :
 
-```
+```text
 node_modules
 dist
 .git
@@ -365,7 +365,7 @@ curl http://localhost/health
 ```
 
 Ou depuis votre navigateur :
-```
+```text
 http://51.21.196.104
 ```
 

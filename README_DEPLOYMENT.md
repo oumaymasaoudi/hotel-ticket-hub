@@ -14,7 +14,7 @@ Ce projet frontend est **séparé** du backend et déployé indépendamment sur 
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────┐
 │  GitHub Actions │
 │                 │
@@ -53,7 +53,7 @@ Ce projet frontend est **séparé** du backend et déployé indépendamment sur 
 
 ## 📁 Structure du projet
 
-```
+```text
 hotel-ticket-hub/
 ├── src/                    # Code source React
 │   ├── components/         # Composants React
@@ -334,9 +334,9 @@ ls -la Dockerfile nginx.conf docker-compose.yml
 
 ## 🎯 URLs
 
-- **Frontend Staging** : http://51.21.196.104
-- **Backend Staging** : http://13.49.44.219:8081/api
-- **Health Check** : http://51.21.196.104/health
+- **Frontend Staging** : <http://51.21.196.104>
+- **Backend Staging** : <http://13.49.44.219:8081/api>
+- **Health Check** : <http://51.21.196.104/health>
 
 ---
 

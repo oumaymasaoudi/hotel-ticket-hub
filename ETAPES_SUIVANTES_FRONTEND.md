@@ -165,7 +165,7 @@ docker compose logs -f
 
 ### Test depuis votre navigateur
 
-```
+```text
 http://51.21.196.104
 ```
 

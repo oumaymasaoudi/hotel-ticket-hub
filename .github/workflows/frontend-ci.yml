@@ -257,16 +257,19 @@ jobs:
 
       - name: Deploy to staging VM
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         with:
           host: ${{ secrets.FRONTEND_STAGING_HOST }}
           username: ${{ secrets.FRONTEND_STAGING_USER }}
           key: ${{ secrets.FRONTEND_STAGING_SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN
           script: |
             set -e
             cd /opt/hotel-ticket-hub-frontend-staging
             
-            # Log in to GitHub Container Registry
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Log in to GitHub Container Registry (token passed via env var for security)
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Pull latest image
             export DOCKER_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}:develop
@@ -276,7 +279,6 @@ jobs:
             docker compose down || true
             
             # Start new container
-            export DOCKER_IMAGE=$DOCKER_IMAGE
             docker compose up -d
             
             # Wait for startup

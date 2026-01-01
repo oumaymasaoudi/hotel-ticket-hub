@@ -28,7 +28,7 @@ Get-Content github-actions-key | Set-Clipboard
 ```
 
 **Format** : Le contenu commence par :
-```
+```text
 -----BEGIN OPENSSH PRIVATE KEY-----
 ...
 -----END OPENSSH PRIVATE KEY-----
