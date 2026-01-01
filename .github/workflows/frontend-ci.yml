@@ -227,8 +227,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Cache désactivé temporairement pour forcer un rebuild complet
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
+          no-cache: true
           build-args: |
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || 'http://13.49.44.219:8081/api' }}
 

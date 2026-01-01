@@ -52,12 +52,21 @@ git push origin develop
 
 Si vous voulez rebuild directement sur la VM staging :
 
+> **Note** : Voir `DEPLOYMENT_GUIDE.md` pour un guide consolidé avec variables d'environnement.
+
 ```bash
+# Configuration (à adapter selon votre environnement)
+export DEPLOYMENT_DIR="${DEPLOYMENT_DIR:-/opt/hotel-ticket-hub-frontend-staging}"
+export VM_IP="${VM_IP:-51.21.196.104}"
+
 # SSH sur la VM frontend
-ssh -i <key> ubuntu@51.21.196.104
+ssh -i <key> ubuntu@$VM_IP
 
 # Aller dans le répertoire
-cd /opt/hotel-ticket-hub-frontend-staging
+cd "$DEPLOYMENT_DIR"
+
+# Authentification GHCR (si nécessaire)
+# echo "$GHCR_TOKEN" | docker login ghcr.io -u $GHCR_USER --password-stdin
 
 # Pull la dernière image (ou rebuild si nécessaire)
 docker compose pull
