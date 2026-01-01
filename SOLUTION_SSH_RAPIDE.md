@@ -3,7 +3,7 @@
 ## ⚠️ Le problème
 
 Le pipeline échoue toujours avec :
-```
+```bash
 ssh: handshake failed: ssh: unable to authenticate
 ```
 

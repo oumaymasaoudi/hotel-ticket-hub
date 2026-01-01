@@ -1,4 +1,4 @@
-# ✅ Corrections SonarQube - Security Hotspots
+# ✅ Corrections SonarQube — Security Hotspots
 
 ## 🔧 Corrections Effectuées
 
