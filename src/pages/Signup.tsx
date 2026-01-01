@@ -77,6 +77,11 @@ const Signup = () => {
     }
   }, [toast]);
 
+  // Charger les hôtels au montage du composant
+  useEffect(() => {
+    fetchHotels();
+  }, [fetchHotels]);
+
   const toggleSpecialty = (specialty: string) => {
     setSelectedSpecialties((prev) =>
       prev.includes(specialty)
