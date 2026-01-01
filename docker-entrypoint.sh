@@ -12,7 +12,7 @@ fi
 
 # Verify nginx.conf has correct pid path
 if ! grep -q "pid /var/run/nginx/nginx.pid" /etc/nginx/nginx.conf; then
-    echo "ERROR: nginx.conf must have 'pid /var/run/nginx/nginx.pid;'"
+    echo "ERROR: nginx.conf must have 'pid /var/run/nginx/nginx.pid;'" >&2
     exit 1
 fi
 

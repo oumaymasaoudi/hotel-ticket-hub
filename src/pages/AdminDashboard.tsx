@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel, Plan, Technician, Subscription } from "@/services/apiService";
+import { apiService, TicketResponse, type Hotel, Plan, Technician, Subscription } from "@/services/apiService";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationControls } from "@/components/PaginationControls";

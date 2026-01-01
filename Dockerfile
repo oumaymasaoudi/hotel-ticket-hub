@@ -35,13 +35,11 @@ COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY nginx-main.conf /etc/nginx/nginx.conf
 
-# Copy custom entrypoint script
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-# Create nginx pid directory and set permissions for non-root user
+# Copy custom entrypoint script and create nginx directories with permissions
 # Must be done as root before switching to nginx user
-RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp \
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh && \
+    mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp \
     /var/cache/nginx/fastcgi_temp /var/cache/nginx/uwsgi_temp \
     /var/cache/nginx/scgi_temp /var/run/nginx && \
     chown -R nginx:nginx /usr/share/nginx/html && \
@@ -55,9 +53,8 @@ RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp \
     chmod -R 755 /var/log/nginx && \
     chmod -R 755 /etc/nginx/conf.d && \
     chmod -R 755 /var/run/nginx && \
-    # Verify nginx.conf has correct pid path
     grep -q "pid /var/run/nginx/nginx.pid" /etc/nginx/nginx.conf || \
-    (echo "ERROR: nginx.conf pid path not set correctly" && exit 1)
+    (echo "ERROR: nginx.conf pid path not set correctly" >&2 && exit 1)
 
 # Switch to non-root user (nginx user already exists in nginx:alpine)
 USER nginx
