@@ -137,7 +137,6 @@ const TechnicianDashboard = () => {
             toast({
                 title: "Erreur",
                 description: errorMessage,
-                description: error.message || "Impossible de mettre à jour le statut",
                 variant: "destructive",
             });
         } finally {

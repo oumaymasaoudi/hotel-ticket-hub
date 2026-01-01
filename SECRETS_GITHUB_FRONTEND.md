@@ -17,8 +17,8 @@
 
 **Comment l'obtenir** :
 ```powershell
-# Depuis hotel-ticket-hub
-cd C:\Users\oumay\projet\hotel-ticket-hub
+# Depuis le répertoire hotel-ticket-hub
+cd <chemin-vers-hotel-ticket-hub>
 Get-Content github-actions-key
 ```
 

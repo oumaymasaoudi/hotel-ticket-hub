@@ -230,7 +230,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_API_BASE_URL=http://13.49.44.219:8081/api
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || 'http://13.49.44.219:8081/api' }}
 
   # ============================================
   # DEPLOY TO STAGING (for develop branch)
@@ -281,8 +281,20 @@ jobs:
             # Start new container
             docker compose up -d
             
-            # Wait for startup
-            sleep 5
+            # Wait for container to become healthy
+            echo "Waiting for container to become healthy..."
+            for i in {1..30}; do
+              if curl -sf http://localhost/health > /dev/null 2>&1; then
+                echo "Container is healthy!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Container did not become healthy within 30 seconds"
+                docker compose logs
+                exit 1
+              fi
+              sleep 1
+            done
             
             # Show logs
             docker compose logs --tail=50

@@ -204,16 +204,19 @@ Ajoutez le déploiement dans `.github/workflows/frontend-ci.yml` :
 
       - name: Deploy to staging VM
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         with:
           host: ${{ secrets.FRONTEND_STAGING_HOST }}
           username: ${{ secrets.FRONTEND_STAGING_USER }}
           key: ${{ secrets.FRONTEND_STAGING_SSH_PRIVATE_KEY }}
+          envs: GHCR_TOKEN
           script: |
             set -e
             cd /opt/hotel-ticket-hub-frontend-staging
             
-            # Log in to GitHub Container Registry
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Log in to GitHub Container Registry (token passed via env var for security)
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Pull latest image
             export DOCKER_IMAGE=ghcr.io/${{ github.repository }}/frontend:develop
@@ -223,12 +226,22 @@ Ajoutez le déploiement dans `.github/workflows/frontend-ci.yml` :
             docker compose down || true
             
             # Start new container
-            export DOCKER_IMAGE=$DOCKER_IMAGE
-            export VITE_API_BASE_URL=http://13.49.44.219:8081/api
             docker compose up -d
             
-            # Wait for startup
-            sleep 5
+            # Wait for container to become healthy
+            echo "Waiting for container to become healthy..."
+            for i in {1..30}; do
+              if curl -sf http://localhost/health > /dev/null 2>&1; then
+                echo "Container is healthy!"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "Container did not become healthy within 30 seconds"
+                docker compose logs
+                exit 1
+              fi
+              sleep 1
+            done
             
             # Show logs
             docker compose logs --tail=50

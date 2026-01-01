@@ -5,11 +5,12 @@
 Maintenant que les clés sont dans `hotel-ticket-hub`, vous pouvez exécuter :
 
 ```powershell
-# Depuis hotel-ticket-hub
-cd C:\Users\oumay\projet\hotel-ticket-hub
+# Depuis le répertoire hotel-ticket-hub
+cd <chemin-vers-hotel-ticket-hub>
 
 # Copier la clé SSH sur la VM frontend
-.\copy-ssh-key.ps1 -HostIP "51.21.196.104" -AWSKey "$HOME\Downloads\oumayma-key.pem" -User "ubuntu"
+# Remplacez <FRONTEND_VM_IP> et <PATH_TO_AWS_KEY> par vos valeurs
+.\copy-ssh-key.ps1 -HostIP "<FRONTEND_VM_IP>" -AWSKey "<PATH_TO_AWS_KEY>" -User "ubuntu"
 ```
 
 ---

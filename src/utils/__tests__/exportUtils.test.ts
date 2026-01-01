@@ -387,6 +387,22 @@ describe('exportUtils', () => {
     });
 
     describe('exportTicketToPDF', () => {
+        // Helper function to create mock jsPDF document
+        const createMockDoc = (splitTextResult: string[] = []) => ({
+            text: jest.fn(),
+            save: jest.fn(),
+            setFontSize: jest.fn(),
+            setFont: jest.fn(),
+            addPage: jest.fn(),
+            splitTextToSize: jest.fn(() => splitTextResult),
+            internal: {
+                pageSize: {
+                    getWidth: jest.fn(() => 210),
+                    getHeight: jest.fn(() => 297),
+                },
+            },
+        });
+
         it('should export ticket to PDF', () => {
             const ticket: TicketResponse = {
                 id: 'ticket-1',
@@ -484,20 +500,8 @@ describe('exportUtils', () => {
                 updatedAt: new Date().toISOString()
             };
 
-            const mockDoc = {
-                text: jest.fn(),
-                save: jest.fn(),
-                setFontSize: jest.fn(),
-                setFont: jest.fn(),
-                addPage: jest.fn(),
-                splitTextToSize: jest.fn(() => Array.from({ length: 100 }, () => 'A'.repeat(50))),
-                internal: {
-                    pageSize: {
-                        getWidth: jest.fn(() => 210),
-                        getHeight: jest.fn(() => 297),
-                    },
-                },
-            };
+            const splitTextResult = Array.from({ length: 100 }, () => 'A'.repeat(50));
+            const mockDoc = createMockDoc(splitTextResult);
 
             (jsPDF as unknown as jest.Mock).mockReturnValue(mockDoc);
 

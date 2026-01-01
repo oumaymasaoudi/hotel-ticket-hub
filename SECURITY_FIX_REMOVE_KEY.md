@@ -52,12 +52,18 @@ git push origin --force
    ```
 
 2. **Copier la nouvelle clé publique sur les VMs** :
+   
+   Remplacez les placeholders suivants par vos propres valeurs :
+   - `<BACKEND_VM_IP>` : Adresse IP de votre VM backend staging (ex: 13.49.44.219)
+   - `<FRONTEND_VM_IP>` : Adresse IP de votre VM frontend staging (ex: 51.21.196.104)
+   - `<PATH_TO_AWS_KEY>` : Chemin complet vers votre clé AWS (ex: $HOME\Downloads\oumayma-key.pem)
+   
    ```powershell
    # Backend VM
-   .\copy-ssh-key.ps1 -HostIP "13.49.44.219" -AWSKey "$HOME\Downloads\oumayma-key.pem" -User "ubuntu"
+   .\copy-ssh-key.ps1 -HostIP "<BACKEND_VM_IP>" -AWSKey "<PATH_TO_AWS_KEY>" -User "ubuntu"
    
    # Frontend VM
-   .\copy-ssh-key.ps1 -HostIP "51.21.196.104" -AWSKey "$HOME\Downloads\oumayma-key.pem" -User "ubuntu"
+   .\copy-ssh-key.ps1 -HostIP "<FRONTEND_VM_IP>" -AWSKey "<PATH_TO_AWS_KEY>" -User "ubuntu"
    ```
 
 3. **Mettre à jour le secret GitHub** :
