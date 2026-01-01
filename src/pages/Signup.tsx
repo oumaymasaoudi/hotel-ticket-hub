@@ -111,8 +111,9 @@ const Signup = () => {
       return;
     }
 
-    // Admin et Technicien doivent sélectionner un hôtel (règle de gestion)
-    if ((formData.role === "admin" || formData.role === "technician") && !formData.hotelId) {
+    // Admin doit sélectionner un hôtel (règle de gestion)
+    // Les techniciens travaillent pour tous les hôtels, pas besoin de sélectionner
+    if (formData.role === "admin" && !formData.hotelId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un hôtel",
@@ -139,7 +140,7 @@ const Signup = () => {
         fullName: formData.fullName,
         phone: formData.phone,
         role: formData.role,
-        hotelId: (formData.role === "admin" || formData.role === "technician") ? formData.hotelId : undefined,
+        hotelId: formData.role === "admin" ? formData.hotelId : undefined, // Seulement pour les admins
         specialties:
           formData.role === "technician" ? selectedSpecialties : undefined,
       });
@@ -236,8 +237,9 @@ const Signup = () => {
             </Select>
           </div>
 
-          {/* Admin et Technicien doivent sélectionner un hôtel (règle de gestion) */}
-          {(formData.role === "admin" || formData.role === "technician") && (
+          {/* Admin doit sélectionner un hôtel (règle de gestion) */}
+          {/* Les techniciens travaillent pour tous les hôtels, pas besoin de sélectionner */}
+          {formData.role === "admin" && (
             <div>
               <Label htmlFor="hotel">Hôtel *</Label>
               {hotels.length === 0 ? (
