@@ -231,27 +231,43 @@ const CreateTicket = () => {
                 <h2 className="text-2xl font-bold mb-2 text-card-foreground">Sélection de la catégorie</h2>
                 <p className="text-muted-foreground">Choisissez la catégorie correspondant à votre problème</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categories.map((category) => {
-                  const IconComponent = getIconComponent(category.icon);
-                  return (
-                    <CategoryCard
-                      key={category.id}
-                      icon={IconComponent}
-                      name={category.name}
-                      color={category.color}
-                      selected={selectedCategoryId === category.id}
-                      onClick={() => setSelectedCategoryId(category.id)}
-                    />
-                  );
-                })}
-              </div>
+              {categories.length === 0 ? (
+                <div className="p-4 border border-destructive/40 rounded-lg bg-destructive/5">
+                  <p className="text-sm text-destructive font-medium mb-2">
+                    ⚠️ Aucune catégorie disponible
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Les catégories doivent être créées par le SuperAdmin ou exécutez le script <code className="bg-muted px-1 rounded">create-default-categories.sql</code> dans la base de données.
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Connectez-vous en tant que <strong>SuperAdmin</strong></li>
+                    <li>Allez dans <strong>"Catégories"</strong> → <strong>"Créer une catégorie"</strong></li>
+                    <li>Ou exécutez le script SQL <code className="bg-muted px-1 rounded">create-default-categories.sql</code> sur la base de données PostgreSQL</li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {categories.map((category) => {
+                    const IconComponent = getIconComponent(category.icon);
+                    return (
+                      <CategoryCard
+                        key={category.id}
+                        icon={IconComponent}
+                        name={category.name}
+                        color={category.color}
+                        selected={selectedCategoryId === category.id}
+                        onClick={() => setSelectedCategoryId(category.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
               <div className="flex justify-between">
                 <Button variant="outline" onClick={handleBack}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Retour
                 </Button>
-                <Button onClick={handleNext} disabled={!selectedCategoryId}>
+                <Button onClick={handleNext} disabled={!selectedCategoryId || categories.length === 0}>
                   Continuer
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

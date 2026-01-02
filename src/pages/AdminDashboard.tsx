@@ -295,7 +295,8 @@ const AdminDashboard = () => {
             // Charger les techniciens pour le dashboard
             fetchTechnicians(hotelId);
         }
-    }, [authLoading, user?.userId, hotelId, fetchTickets, fetchHotel, fetchTechnicians]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, user?.userId, hotelId]);
 
     // Charger les données spécifiques selon la vue active
     useEffect(() => {
