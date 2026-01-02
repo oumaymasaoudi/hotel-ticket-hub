@@ -13,6 +13,8 @@ import ClientDashboard from "./pages/ClientDashboard";
 import TechnicianDashboard from "./pages/TechnicianDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
+import PrivacySettings from "./pages/PrivacySettings";
+import AdminGdprManagement from "./pages/AdminGdprManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,13 @@ const App = () => {
           {/* SuperAdmin routes */}
           <Route path="/dashboard/superadmin" element={<SuperAdminDashboard />} />
           <Route path="/dashboard/superadmin/*" element={<SuperAdminDashboard />} />
+          
+          {/* Privacy & GDPR routes (accessible à tous les utilisateurs connectés) */}
+          <Route path="/privacy" element={<PrivacySettings />} />
+          
+          {/* Admin GDPR Management */}
+          <Route path="/dashboard/admin/gdpr" element={<AdminGdprManagement />} />
+          <Route path="/dashboard/superadmin/gdpr" element={<AdminGdprManagement />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>

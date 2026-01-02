@@ -98,6 +98,54 @@ export interface User {
   fullName: string;
   phone?: string;
   hotelId?: string;
+}
+
+// ============================================
+// Interfaces RGPD
+// ============================================
+
+export interface GdprConsent {
+  id: string;
+  userId: string;
+  consentType: string; // DATA_PROCESSING, MARKETING, ANALYTICS, THIRD_PARTY
+  consented: boolean;
+  consentDate: string;
+  privacyPolicyVersion: string;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GdprDataExport {
+  userId: string;
+  exportDate: string;
+  data: {
+    profile: any;
+    tickets: any[];
+    payments: any[];
+    gdprConsents: any[];
+    auditLogs: any[];
+  };
+}
+
+export interface GdprDeletionRequest {
+  requestId: string;
+  status: string;
+  message: string;
+}
+
+export interface DataDeletionRequest {
+  id: string;
+  userId: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
+  rejectionReason?: string;
+  processedAt?: string;
+  processedBy?: string;
+  ipAddress?: string;
+  confirmationSent: boolean;
+  createdAt: string;
+}
   isActive: boolean;
   role?: string;
   specialties?: string[];
@@ -861,6 +909,92 @@ export const apiService = {
 
     if (!response.ok) {
       throw new Error('Failed to fetch global report');
+    }
+
+    return response.json();
+  },
+
+  // ============================================
+  // RGPD - Conformité et Protection des Données
+  // ============================================
+
+  // Consentement RGPD
+  async recordGdprConsent(consentType: string, consented: boolean): Promise<GdprConsent> {
+    const response = await fetch(`${API_BASE_URL}/gdpr/consent`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ consentType, consented }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to record GDPR consent');
+    }
+
+    return response.json();
+  },
+
+  async getUserConsents(): Promise<GdprConsent[]> {
+    const response = await fetch(`${API_BASE_URL}/gdpr/consent`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch GDPR consents');
+    }
+
+    return response.json();
+  },
+
+  // Export des données personnelles
+  async exportUserData(): Promise<GdprDataExport> {
+    const response = await fetch(`${API_BASE_URL}/gdpr/export`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export user data');
+    }
+
+    return response.json();
+  },
+
+  // Demande de suppression (Droit à l'oubli)
+  async requestDataDeletion(): Promise<GdprDeletionRequest> {
+    const response = await fetch(`${API_BASE_URL}/gdpr/deletion-request`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to request data deletion' }));
+      throw new Error(error.message || 'Failed to request data deletion');
+    }
+
+    return response.json();
+  },
+
+  // Admin: Liste des demandes de suppression
+  async getAllDeletionRequests(): Promise<GdprDeletionRequest[]> {
+    const response = await fetch(`${API_BASE_URL}/gdpr/deletion-requests`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch deletion requests');
+    }
+
+    return response.json();
+  },
+
+  // Admin: Traiter une demande de suppression
+  async processDeletionRequest(requestId: string): Promise<{ message: string; requestId: string }> {
+    const response = await fetch(`${API_BASE_URL}/gdpr/deletion-requests/${requestId}/process`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to process deletion request');
     }
 
     return response.json();
