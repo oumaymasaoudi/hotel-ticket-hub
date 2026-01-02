@@ -35,7 +35,8 @@ export interface TicketResponse {
   images?: Array<{ id: string; storage_path: string; file_name: string }>;
 }
 
-export interface Hotel {
+// Hotel interface - exported as type to avoid runtime reference
+export type Hotel = {
   id: string;
   name: string;
   address?: string;
