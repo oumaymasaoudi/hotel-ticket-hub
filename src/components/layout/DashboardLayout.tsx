@@ -4,7 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth, UserRole } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Star, CheckCircle, Moon, Sun, Bell } from "lucide-react";
+import { ArrowLeft, Star, CheckCircle, Moon, Sun, Bell, Hotel as IconHotel } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
@@ -90,7 +90,7 @@ export function DashboardLayout({
           <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/95" />
 
           {/* Content */}
-          <header className="relative h-16 border-b border-border/50 bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 gap-4 shadow-sm">
+          <header className="relative h-16 border-b border-border/50 bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 gap-4 shadow-sm sticky top-0 z-50">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="text-primary hover:bg-primary/10" />
               {showBackButton && (
@@ -209,7 +209,21 @@ export function DashboardLayout({
               )}
             </div>
           </header>
-          <main className="relative flex-1 p-6 overflow-auto">{children}</main>
+          <main className="relative flex-1 p-6 overflow-auto pb-20">{children}</main>
+          {/* Footer toujours visible */}
+          <div className="relative border-t border-border/50 bg-card/80 backdrop-blur-sm">
+            <div className="container mx-auto px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <IconHotel className="h-5 w-5 text-primary" />
+                  <span className="text-lg font-serif font-bold text-foreground">TicketHotel</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  © {new Date().getFullYear()} TicketHotel. Tous droits réservés.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </SidebarProvider>

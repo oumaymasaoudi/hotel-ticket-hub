@@ -7,6 +7,7 @@ import { Hotel, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiService } from "@/services/apiService";
 import { useToast } from "@/hooks/use-toast";
+import { AppFooter } from "@/components/layout/AppFooter";
 import {
   Select,
   SelectContent,
@@ -23,28 +24,15 @@ interface HotelData {
   name: string;
 }
 
-// Liste fixe des spécialités pour les techniciens
-const TECHNICIAN_SPECIALTIES = [
-  "Electricité",
-  "Plomberie",
-  "Climatisation / Chauffage",
-  "Internet / WiFi",
-  "Serrurerie",
-  "Chambre",
-  "Salle de bain",
-  "Bruit",
-  "Propreté",
-  "Sécurité",
-  "Restauration / Room Service",
-  "Autres",
-];
+// Les catégories seront chargées depuis l'API
 
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [hotels, setHotels] = useState<HotelData[]>([]);
-  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     email: "",
@@ -77,11 +65,34 @@ const Signup = () => {
     }
   }, [toast]);
 
-  const toggleSpecialty = (specialty: string) => {
-    setSelectedSpecialties((prev) =>
-      prev.includes(specialty)
-        ? prev.filter((s) => s !== specialty)
-        : [...prev, specialty]
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await apiService.getCategories();
+      if (data && data.length > 0) {
+        setCategories(data);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Impossible de charger la liste des catégories";
+      console.error("Error fetching categories:", errorMessage, error);
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  // Charger les hôtels et catégories au montage du composant
+  useEffect(() => {
+    fetchHotels();
+    fetchCategories();
+  }, [fetchHotels, fetchCategories]);
+
+  const toggleCategory = (categoryName: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(categoryName)
+        ? prev.filter((c) => c !== categoryName)
+        : [...prev, categoryName]
     );
   };
 
@@ -106,8 +117,9 @@ const Signup = () => {
       return;
     }
 
-    // Admin et Technicien doivent sélectionner un hôtel (règle de gestion)
-    if ((formData.role === "admin" || formData.role === "technician") && !formData.hotelId) {
+    // Admin doit sélectionner un hôtel (règle de gestion)
+    // Les techniciens travaillent pour tous les hôtels, pas besoin de sélectionner
+    if (formData.role === "admin" && !formData.hotelId) {
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un hôtel",
@@ -116,10 +128,10 @@ const Signup = () => {
       return;
     }
 
-    if (formData.role === "technician" && selectedSpecialties.length === 0) {
+    if (formData.role === "technician" && selectedCategories.length === 0) {
       toast({
         title: "Erreur",
-        description: "Veuillez sélectionner au moins une spécialité",
+        description: "Veuillez sélectionner au moins une catégorie",
         variant: "destructive",
       });
       return;
@@ -134,9 +146,9 @@ const Signup = () => {
         fullName: formData.fullName,
         phone: formData.phone,
         role: formData.role,
-        hotelId: (formData.role === "admin" || formData.role === "technician") ? formData.hotelId : undefined,
+        hotelId: formData.role === "admin" ? formData.hotelId : undefined, // Seulement pour les admins
         specialties:
-          formData.role === "technician" ? selectedSpecialties : undefined,
+          formData.role === "technician" ? selectedCategories : undefined, // Stocker les noms des catégories comme spécialités
       });
 
       toast({
@@ -157,7 +169,8 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
       {/* Background */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -231,8 +244,9 @@ const Signup = () => {
             </Select>
           </div>
 
-          {/* Admin et Technicien doivent sélectionner un hôtel (règle de gestion) */}
-          {(formData.role === "admin" || formData.role === "technician") && (
+          {/* Admin doit sélectionner un hôtel (règle de gestion) */}
+          {/* Les techniciens travaillent pour tous les hôtels, pas besoin de sélectionner */}
+          {formData.role === "admin" && (
             <div>
               <Label htmlFor="hotel">Hôtel *</Label>
               {hotels.length === 0 ? (
@@ -268,29 +282,46 @@ const Signup = () => {
 
           {formData.role === "technician" && (
             <div>
-              <Label>Spécialités</Label>
+              <Label>Catégories</Label>
               <p className="text-xs text-muted-foreground mb-2">
-                Sélectionnez vos domaines d&apos;intervention
+                Sélectionnez vos domaines d&apos;intervention (même liste que pour la création de tickets)
               </p>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md bg-background/50">
-                {TECHNICIAN_SPECIALTIES.map((spec) => (
-                  <div
-                    key={spec}
-                    onClick={() => toggleSpecialty(spec)}
-                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${selectedSpecialties.includes(spec)
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:bg-accent"
-                      }`}
-                  >
-                    <div className="w-3 h-3 rounded-full flex-shrink-0 bg-primary/60" />
-                    <span className="text-xs">{spec}</span>
+              {categories.length === 0 ? (
+                <div className="p-4 border border-destructive/40 rounded-lg bg-destructive/5">
+                  <p className="text-sm text-destructive font-medium mb-2">
+                    ⚠️ Aucune catégorie disponible
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Les catégories doivent être créées par le SuperAdmin ou exécutez le script create-default-categories.sql
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 border rounded-md bg-background/50">
+                    {categories.map((category) => (
+                      <div
+                        key={category.id}
+                        onClick={() => toggleCategory(category.name)}
+                        className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-all border ${selectedCategories.includes(category.name)
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:bg-accent"
+                          }`}
+                        style={selectedCategories.includes(category.name) ? { borderColor: category.color } : {}}
+                      >
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="text-xs">{category.name}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {selectedSpecialties.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {selectedSpecialties.length} spécialité(s) sélectionnée(s)
-                </p>
+                  {selectedCategories.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedCategories.length} catégorie(s) sélectionnée(s)
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -339,6 +370,8 @@ const Signup = () => {
           </div>
         </form>
       </Card>
+      </div>
+      <AppFooter />
     </div>
   );
 };

@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel, Category, Plan, User, Payment, AuditLog } from "@/services/apiService";
+// Force rebuild: Hotel type import fix - Changed at 2026-01-02 14:20
+import { apiService, TicketResponse, type Hotel, Category, Plan, User, Payment, AuditLog } from "@/services/apiService";
 import { Building2, Users, TicketCheck, DollarSign, AlertTriangle, RefreshCw, TrendingUp, Layers, FileText, History, Settings, Wrench, Edit, Trash2, Plus, Search, Clock, ArrowUp, CheckCircle, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -286,7 +287,7 @@ const DashboardView = ({ stats, tickets, hotels, overduePayments }: DashboardVie
                     <p className="text-sm text-muted-foreground">Aucun hôtel enregistré</p>
                 ) : (
                     <div className="space-y-2">
-                        {hotels.slice(0, 5).map((hotel: Hotel) => (
+                        {hotels.slice(0, 5).map((hotel) => (
                             <div key={hotel.id} className="flex items-center justify-between p-2 border rounded">
                                 <div>
                                     <p className="font-medium">{hotel.name}</p>

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel, Plan, Technician, Subscription } from "@/services/apiService";
+// Force rebuild: Hotel type import fix - Changed at 2026-01-02 14:20
+import { apiService, TicketResponse, type Hotel, Plan, Technician, Subscription } from "@/services/apiService";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -246,45 +247,23 @@ const AdminDashboard = () => {
         let filtered = technicians;
 
         // Filtrage par catégorie du ticket (si un ticket est sélectionné)
-        if (selectedTicket) {
-            const ticketCategory = selectedTicket.categoryName?.toLowerCase() || '';
+        // Les spécialités des techniciens contiennent maintenant les noms des catégories
+        if (selectedTicket?.categoryName) {
+            const ticketCategoryName = selectedTicket.categoryName.trim();
 
-            // Mapping des catégories vers les spécialités potentielles
-            const categoryToSpecialtyMap: Record<string, string[]> = {
-                'plomberie': ['plomberie', 'plombier', 'eau', 'sanitaire'],
-                'électricité': ['électricité', 'électricien', 'électrique'],
-                'climatisation': ['climatisation', 'chauffage', 'ventilation'],
-                'wifi/internet': ['wifi', 'internet', 'réseau', 'informatique'],
-                'serrurerie': ['serrurerie', 'serrurier', 'sécurité'],
-                'mobilier': ['mobilier', 'menuiserie', 'réparation'],
-                'sanitaires': ['sanitaire', 'plomberie', 'hygiène'],
-                'insonorisation': ['insonorisation', 'acoustique'],
-                'nettoyage': ['nettoyage', 'ménage'],
-                'sécurité': ['sécurité', 'serrurerie'],
-                'restauration': ['restauration', 'cuisine'],
-                'approvisionnement': ['approvisionnement', 'logistique'],
-            };
+            // Filtrer les techniciens qui ont cette catégorie dans leurs spécialités
+            filtered = filtered.filter((tech: Technician) => {
+                // Si le technicien n'a pas de spécialités, ne pas l'inclure (il doit avoir des catégories)
+                if (!tech.specialties || tech.specialties.length === 0) {
+                    return false;
+                }
 
-            // Trouver les spécialités correspondantes
-            const matchingSpecialties = categoryToSpecialtyMap[ticketCategory] || [];
-
-            // Filtrer les techniciens qui ont une spécialité correspondante
-            if (matchingSpecialties.length > 0) {
-                filtered = filtered.filter((tech: Technician) => {
-                    // Si le technicien n'a pas de spécialités, l'inclure quand même
-                    if (!tech.specialties || tech.specialties.length === 0) {
-                        return true;
-                    }
-
-                    // Vérifier si au moins une spécialité du technicien correspond
-                    return tech.specialties.some((specialty: string) =>
-                        matchingSpecialties.some(match =>
-                            specialty.toLowerCase().includes(match.toLowerCase()) ||
-                            match.toLowerCase().includes(specialty.toLowerCase())
-                        )
-                    );
-                });
-            }
+                // Vérifier si le technicien a exactement cette catégorie dans ses spécialités
+                // Les spécialités stockent les noms des catégories
+                return tech.specialties.some((specialty: string) =>
+                    specialty.trim().toLowerCase() === ticketCategoryName.toLowerCase()
+                );
+            });
         }
 
         // Filtrage par recherche de spécialité
@@ -316,7 +295,8 @@ const AdminDashboard = () => {
             // Charger les techniciens pour le dashboard
             fetchTechnicians(hotelId);
         }
-    }, [authLoading, user?.userId, hotelId, fetchTickets, fetchHotel, fetchTechnicians]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, user?.userId, hotelId]);
 
     // Charger les données spécifiques selon la vue active
     useEffect(() => {

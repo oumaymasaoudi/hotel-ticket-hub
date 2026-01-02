@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -71,6 +71,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.0.3",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -89,6 +92,7 @@
     "jest-environment-jsdom": "^30.2.0",
     "lovable-tagger": "^1.1.11",
     "postcss": "^8.5.6",
+    "semantic-release": "^23.0.2",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.4.6",
     "typescript": "^5.8.3",

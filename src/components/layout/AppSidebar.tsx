@@ -34,6 +34,7 @@ import {
   Layers,
   DollarSign,
   Star,
+  Lock,
 } from "lucide-react";
 import sidebarBg from "@/assets/sidebar-luxury-bg.jpg";
 
@@ -241,6 +242,73 @@ export function AppSidebar({ role, hotelName }: AppSidebarProps) {
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Section Confidentialité - Accessible à tous */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/50 text-xs uppercase tracking-wider px-4">Confidentialité</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem className="px-2">
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === "/privacy"}
+                  tooltip="Paramètres de confidentialité"
+                >
+                  <NavLink
+                    to="/privacy"
+                    className={`
+                      group relative flex items-center gap-3 px-4 py-3 rounded-lg
+                      transition-all duration-300 ease-out
+                      ${location.pathname === "/privacy"
+                        ? "bg-gradient-to-r from-sidebar-primary/30 to-sidebar-primary/10 text-sidebar-primary font-medium shadow-[0_0_20px_hsl(42_80%_52%/0.3)]"
+                        : "text-white/70 hover:text-white"
+                      }
+                    `}
+                  >
+                    <div className={`
+                      absolute inset-0 rounded-lg opacity-0 transition-opacity duration-300
+                      bg-gradient-to-r from-sidebar-primary/20 via-sidebar-primary/10 to-transparent
+                      group-hover:opacity-100
+                      ${location.pathname === "/privacy" ? "opacity-100" : ""}
+                    `} />
+                    <div className={`
+                      absolute left-0 top-1/2 -translate-y-1/2 w-1 rounded-full
+                      transition-all duration-300 ease-out
+                      ${location.pathname === "/privacy"
+                        ? "h-8 bg-gradient-to-b from-sidebar-primary to-sidebar-primary/50 shadow-[0_0_10px_hsl(42_80%_52%/0.5)]"
+                        : "h-0 bg-sidebar-primary group-hover:h-4"
+                      }
+                    `} />
+                    <div className={`
+                      relative z-10 p-1.5 rounded-md transition-all duration-300
+                      ${location.pathname === "/privacy"
+                        ? "bg-sidebar-primary/20 shadow-[0_0_15px_hsl(42_80%_52%/0.4)]"
+                        : "group-hover:bg-sidebar-primary/10 group-hover:shadow-[0_0_10px_hsl(42_80%_52%/0.2)]"
+                      }
+                    `}>
+                      <Lock className={`
+                        h-4 w-4 transition-all duration-300
+                        ${location.pathname === "/privacy"
+                          ? "text-sidebar-primary"
+                          : "text-white/60 group-hover:text-sidebar-primary"
+                        }
+                      `} />
+                    </div>
+                    <span className={`
+                      relative z-10 text-sm transition-all duration-300
+                      ${location.pathname === "/privacy"
+                        ? "text-sidebar-primary font-semibold"
+                        : "group-hover:text-white group-hover:translate-x-1"
+                      }
+                    `}>
+                      Confidentialité
+                    </span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
