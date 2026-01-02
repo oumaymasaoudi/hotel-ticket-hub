@@ -112,11 +112,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          # Cache désactivé pour forcer un rebuild complet
+          # cache: 'npm'
+          # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit
 
       - name: Build application
         run: npm run build
