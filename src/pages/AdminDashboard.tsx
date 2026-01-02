@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-// Force rebuild: Hotel type import fix
+// Force rebuild: Hotel type import fix - Changed at 2026-01-02 14:20
 import { apiService, TicketResponse, type Hotel, Plan, Technician, Subscription } from "@/services/apiService";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
 import { usePagination } from "@/hooks/usePagination";

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-// Force rebuild: Hotel type import fix
+// Force rebuild: Hotel type import fix - Changed at 2026-01-02 14:20
 import { apiService, TicketResponse, type Hotel, Category, Plan, User, Payment, AuditLog } from "@/services/apiService";
 import { Building2, Users, TicketCheck, DollarSign, AlertTriangle, RefreshCw, TrendingUp, Layers, FileText, History, Settings, Wrench, Edit, Trash2, Plus, Search, Clock, ArrowUp, CheckCircle, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
