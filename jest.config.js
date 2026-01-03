@@ -4,6 +4,9 @@ export default {
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   moduleNameMapper: {
+    // Mock des imports d'images et autres assets - patterns spécifiques AVANT le mapping générique
+    '^@/.*\\.(jpg|jpeg|png|gif|svg|webp|ico|bmp)$': '<rootDir>/src/__mocks__/fileMock.js',
+    '.*\\.(jpg|jpeg|png|gif|svg|webp|ico|bmp)$': '<rootDir>/src/__mocks__/fileMock.js',
     // Mapping spécifique pour config - doit être AVANT le mapping générique
     '^@/config$': '<rootDir>/src/config.jest.ts',
     '^@/(.*)$': '<rootDir>/src/$1',

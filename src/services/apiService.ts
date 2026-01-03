@@ -121,11 +121,11 @@ export interface GdprDataExport {
   userId: string;
   exportDate: string;
   data: {
-    profile: any;
-    tickets: any[];
-    payments: any[];
-    gdprConsents: any[];
-    auditLogs: any[];
+    profile: User;
+    tickets: TicketResponse[];
+    payments: Payment[];
+    gdprConsents: GdprConsent[];
+    auditLogs: AuditLog[];
   };
 }
 
@@ -145,10 +145,6 @@ export interface DataDeletionRequest {
   ipAddress?: string;
   confirmationSent: boolean;
   createdAt: string;
-}
-  isActive: boolean;
-  role?: string;
-  specialties?: string[];
 }
 
 export interface Payment {
