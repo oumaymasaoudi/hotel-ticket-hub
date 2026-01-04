@@ -1,0 +1,69 @@
+name: Add Oumayma Key to Frontend
+
+on:
+  workflow_dispatch:  # Déclenchement manuel, sans input
+
+jobs:
+  add-key:
+    name: Ajouter la clé Oumayma sur la VM Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          # Utiliser FRONTEND_STAGING_SSH_PRIVATE_KEY (même clé que le déploiement frontend)
+          echo "${{ secrets.FRONTEND_STAGING_SSH_PRIVATE_KEY }}" > ~/.ssh/frontend_key
+          chmod 600 ~/.ssh/frontend_key
+          # Ajouter l'host à known_hosts
+          ssh-keyscan -H ${{ secrets.FRONTEND_STAGING_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          # Configuration SSH optimisée
+          cat >> ~/.ssh/config << EOF
+          Host frontend-staging
+            HostName ${{ secrets.FRONTEND_STAGING_HOST }}
+            User ${{ secrets.FRONTEND_STAGING_USER }}
+            IdentityFile ~/.ssh/frontend_key
+            StrictHostKeyChecking no
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ConnectTimeout 10
+            ServerAliveInterval 60
+            ServerAliveCountMax 3
+          EOF
+          chmod 600 ~/.ssh/config
+      
+      - name: Test SSH Connection
+        run: |
+          echo "🔍 Test de connexion SSH vers la VM Frontend..."
+          timeout 10 ssh -F ~/.ssh/config -o ConnectTimeout=5 -o StrictHostKeyChecking=no frontend-staging "echo 'SSH connection successful'" || {
+            echo "❌ Échec de la connexion SSH"
+            echo "Vérifiez que :"
+            echo "  - La VM Frontend est accessible depuis GitHub Actions"
+            echo "  - Le Security Group AWS autorise les connexions depuis GitHub"
+            echo "  - Les secrets FRONTEND_STAGING_HOST, FRONTEND_STAGING_USER, FRONTEND_STAGING_SSH_PRIVATE_KEY sont corrects"
+            exit 1
+          }
+          echo "✅ Connexion SSH OK"
+      
+      - name: Add Oumayma Public Key
+        run: |
+          ssh -F ~/.ssh/config frontend-staging << EOF
+            echo "=== Ajout de la clé publique ==="
+            echo "${{ secrets.OUMAYMA_SSH_PUBLIC_KEY }}" >> ~/.ssh/authorized_keys
+            chmod 600 ~/.ssh/authorized_keys
+            echo "✅ Clé ajoutée avec succès"
+            echo ""
+            echo "=== Clés autorisées ==="
+            tail -3 ~/.ssh/authorized_keys
+          EOF
+        continue-on-error: true
+      
+      - name: Cleanup SSH
+        if: always()
+        run: |
+          rm -f ~/.ssh/frontend_key ~/.ssh/config ~/.ssh/known_hosts
+
