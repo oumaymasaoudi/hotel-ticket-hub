@@ -1,7 +1,12 @@
 name: Add Oumayma Key to Frontend
 
 on:
-  workflow_dispatch:  # Déclenchement manuel, sans input
+  workflow_dispatch:
+    inputs:
+      public_key:
+        description: 'Clé publique SSH (oumayma-key.pem.pub) - Commence par ssh-rsa ou ssh-ed25519'
+        required: true
+        type: string
 
 jobs:
   add-key:
@@ -53,7 +58,7 @@ jobs:
         run: |
           ssh -F ~/.ssh/config frontend-staging << EOF
             echo "=== Ajout de la clé publique ==="
-            echo "${{ secrets.OUMAYMA_SSH_PUBLIC_KEY }}" >> ~/.ssh/authorized_keys
+            echo "${{ github.event.inputs.public_key }}" >> ~/.ssh/authorized_keys
             chmod 600 ~/.ssh/authorized_keys
             echo "✅ Clé ajoutée avec succès"
             echo ""
