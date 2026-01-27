@@ -1189,6 +1189,7 @@ describe('apiService', () => {
         mockFetch.mockResolvedValueOnce({
             ok: false,
             status: 500,
+            text: async () => 'Server error',
             json: async () => ({ error: 'Server error' })
         });
 
@@ -1232,7 +1233,7 @@ describe('apiService', () => {
             text: async () => ''
         });
 
-        await expect(apiService.login('test@example.com', 'wrong')).rejects.toThrow('Email ou mot de passe incorrect');
+        await expect(apiService.login('test@example.com', 'wrong')).rejects.toThrow('Email or password incorrect');
     });
 
     it('login should handle JSON error response with error property (line 180)', async () => {
@@ -1331,7 +1332,7 @@ describe('apiService', () => {
             categoryId: 'cat-1',
             clientEmail: 'test@example.com',
             description: 'Test'
-        })).rejects.toThrow('Impossible de créer le ticket');
+        })).rejects.toThrow('Failed to create ticket');
     });
 
     it('createTicket should handle parse error', async () => {
@@ -1349,7 +1350,7 @@ describe('apiService', () => {
             categoryId: 'cat-1',
             clientEmail: 'test@example.com',
             description: 'Test'
-        })).rejects.toThrow('Impossible de créer le ticket');
+        })).rejects.toThrow('Failed to create ticket');
     });
 
     it('createTicket should handle tickets with images', async () => {

@@ -630,8 +630,6 @@ export const apiService = {
     userId: string,
     technicianId?: string
   ): Promise<TicketResponse> {
-    console.log('DEBUG - updateTicketStatus called:', { ticketId, status, userId, technicianId });
-    
     const headers = getAuthHeaders();
     headers['Content-Type'] = 'application/json';
     
@@ -643,12 +641,9 @@ export const apiService = {
         body: JSON.stringify({ status, technicianId }),
       }
     );
-
-    console.log('DEBUG - updateTicketStatus response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
-      console.error('DEBUG - updateTicketStatus error:', errorText);
       throw new Error(`Failed to update ticket status: ${errorText}`);
     }
 
