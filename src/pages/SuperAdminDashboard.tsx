@@ -31,7 +31,7 @@ const SuperAdminDashboard = () => {
     const [loading, setLoading] = useState(false);
     const [searchFilter, setSearchFilter] = useState("");
 
-    // ✅ Détecter la route active pour afficher le bon contenu
+    // Detect active route to display correct content
     const currentView = useMemo(() => {
         const path = location.pathname;
         if (path.includes('/hotels')) return 'hotels';
@@ -43,7 +43,7 @@ const SuperAdminDashboard = () => {
         if (path.includes('/reports')) return 'reports';
         if (path.includes('/logs')) return 'logs';
         if (path.includes('/settings')) return 'settings';
-        return 'dashboard'; // Par défaut, afficher le tableau de bord
+        return 'dashboard'; // Default: show dashboard
     }, [location.pathname]);
 
     const fetchData = useCallback(async () => {
@@ -51,16 +51,16 @@ const SuperAdminDashboard = () => {
 
         setLoading(true);
         try {
-            // Récupérer toutes les données en parallèle
+            // Fetch all data in parallel
             const [ticketsData, hotelsData, usersData, categoriesData, overduePaymentsData, allPaymentsData, plansData, logsData] = await Promise.all([
                 apiService.getAllTickets(),
                 apiService.getAllHotels(),
                 apiService.getAllUsers(),
-                apiService.getCategories().catch(() => []), // Utiliser getCategories pour l'instant
-                apiService.getOverduePayments().catch(() => []), // Ignorer l'erreur si l'endpoint n'existe pas
-                apiService.getAllPayments().catch(() => []), // Récupérer tous les paiements
-                apiService.getAllPlans().catch(() => []), // Récupérer les plans
-                apiService.getAllAuditLogs().catch(() => []), // Récupérer les logs d'audit
+                apiService.getCategories().catch(() => []), // Use getCategories for now
+                apiService.getOverduePayments().catch(() => []), // Ignore error if endpoint doesn't exist
+                apiService.getAllPayments().catch(() => []), // Get all payments
+                apiService.getAllPlans().catch(() => []), // Get plans
+                apiService.getAllAuditLogs().catch(() => []), // Get audit logs
             ]);
 
             setTickets(ticketsData);
@@ -97,7 +97,7 @@ const SuperAdminDashboard = () => {
         const resolvedTickets = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
         const urgentTickets = tickets.filter(t => t.isUrgent).length;
         const totalHotels = hotels.length;
-        const activeHotels = hotels.filter(h => h).length; // Ajuster selon votre modèle
+        const activeHotels = hotels.filter(h => h).length; // Adjust according to your model
         const totalUsers = users.length;
         const overdueCount = overduePayments.length;
 
@@ -114,7 +114,7 @@ const SuperAdminDashboard = () => {
         };
     }, [tickets, hotels, users, overduePayments]);
 
-    // ✅ Titre dynamique selon la vue
+    // Dynamic title based on view
     const getTitle = () => {
         switch (currentView) {
             case 'hotels': return 'Gestion des Hôtels';
@@ -143,7 +143,7 @@ const SuperAdminDashboard = () => {
         );
     }
 
-    // ✅ Fonction pour rendre le contenu selon la vue
+    // Function to render content based on view
     const renderContent = () => {
         switch (currentView) {
             case 'hotels':
@@ -200,7 +200,7 @@ const SuperAdminDashboard = () => {
     );
 };
 
-// ✅ Vue Dashboard (par défaut)
+// Dashboard view (default)
 interface DashboardViewProps {
     stats: Record<string, number>;
     tickets: TicketResponse[];
@@ -369,7 +369,7 @@ const DashboardView = ({ stats, tickets, hotels, overduePayments }: DashboardVie
     </>
 );
 
-// ✅ Vue Hôtels
+// Hotels view
 const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
     hotels: Hotel[];
     searchFilter: string;
@@ -625,7 +625,7 @@ const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
     );
 };
 
-// ✅ Vue Utilisateurs
+// Users view
 const UsersView = ({ users, searchFilter }: { users: User[]; searchFilter: string }) => {
     const filteredUsers = users.filter(user =>
         user.email?.toLowerCase().includes(searchFilter.toLowerCase()) ||
@@ -661,7 +661,7 @@ const UsersView = ({ users, searchFilter }: { users: User[]; searchFilter: strin
     );
 };
 
-// ✅ Vue Catégories
+// Categories view
 interface CategoriesViewProps {
     categories: Category[];
     searchFilter: string;
@@ -893,14 +893,14 @@ const CategoriesView = ({ categories, searchFilter, onRefresh }: CategoriesViewP
     );
 };
 
-// ✅ Vue Paiements
+// Payments view
 interface PaymentsViewProps {
     overduePayments: Payment[];
     allPayments: Payment[];
 }
 
 const PaymentsView = ({ overduePayments, allPayments }: PaymentsViewProps) => {
-    // Filtrer les paiements reçus (non en retard)
+    // Filter received payments (not overdue)
     const receivedPayments = allPayments.filter(payment =>
         payment.status === 'PAID' &&
         !overduePayments.some(overdue => overdue.id === payment.id)
@@ -1045,7 +1045,7 @@ const PaymentsView = ({ overduePayments, allPayments }: PaymentsViewProps) => {
     );
 };
 
-// ✅ Vue Escalades
+// Escalations view
 const EscalationsView = ({ tickets }: { tickets: TicketResponse[] }) => (
     <Card>
         <CardHeader>
@@ -1076,7 +1076,7 @@ const EscalationsView = ({ tickets }: { tickets: TicketResponse[] }) => (
     </Card>
 );
 
-// ✅ Vue Rapports
+// Reports view
 interface ReportsViewProps {
     stats: Record<string, number>;
     tickets: TicketResponse[];
@@ -1201,7 +1201,7 @@ const ReportsView = ({ stats, tickets, hotels, users }: ReportsViewProps) => {
     );
 };
 
-// ✅ Vue Logs
+// Logs view
 interface LogsViewProps {
     logs: AuditLog[];
     onRefresh: () => void;
@@ -1430,7 +1430,7 @@ const LogsView = ({ logs, onRefresh }: LogsViewProps) => {
     );
 };
 
-// ✅ Vue Paramètres
+// Settings view
 const SettingsView = () => {
     const { user } = useAuth();
     const { toast } = useToast();
@@ -1571,7 +1571,7 @@ const SettingsView = () => {
     );
 };
 
-// ✅ Vue Plans
+// Plans view
 interface PlansViewProps {
     plans: Plan[];
     onRefresh: () => void;
@@ -1617,7 +1617,7 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
         try {
             const plansData = await apiService.getAllPlans();
             if (plansData && plansData.length > 0) {
-                // Mettre à jour les plans dans le parent via onRefresh
+                // Update plans in parent via onRefresh
                 onRefresh();
                 // Recharger les statistiques
                 const stats = await apiService.getPlanStatistics();
@@ -1734,14 +1734,6 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
                                             Coût ticket supplémentaire
                                         </span>
                                         <span className="font-medium">{plan.excessTicketCost.toFixed(2)}€</span>
-                                    </div>
-                                </div>
-
-                                {/* Séparateur */}
-                                <div className="border-t pt-4">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <span>Plan ID:</span>
-                                        <span className="font-mono">{plan.id.substring(0, 8)}...</span>
                                     </div>
                                 </div>
                             </CardContent>

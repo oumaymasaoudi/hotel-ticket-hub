@@ -56,6 +56,42 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
+  			},
+  			navy: {
+  				50: 'hsl(var(--color-navy-50))',
+  				100: 'hsl(var(--color-navy-100))',
+  				200: 'hsl(var(--color-navy-200))',
+  				300: 'hsl(var(--color-navy-300))',
+  				400: 'hsl(var(--color-navy-400))',
+  				500: 'hsl(var(--color-navy-500))',
+  				600: 'hsl(var(--color-navy-600))',
+  				700: 'hsl(var(--color-navy-700))',
+  				800: 'hsl(var(--color-navy-800))',
+  				900: 'hsl(var(--color-navy-900))'
+  			},
+  			gold: {
+  				50: 'hsl(var(--color-gold-50))',
+  				100: 'hsl(var(--color-gold-100))',
+  				200: 'hsl(var(--color-gold-200))',
+  				300: 'hsl(var(--color-gold-300))',
+  				400: 'hsl(var(--color-gold-400))',
+  				500: 'hsl(var(--color-gold-500))',
+  				600: 'hsl(var(--color-gold-600))',
+  				700: 'hsl(var(--color-gold-700))',
+  				800: 'hsl(var(--color-gold-800))',
+  				900: 'hsl(var(--color-gold-900))'
+  			},
+  			silver: {
+  				50: 'hsl(var(--color-silver-50))',
+  				100: 'hsl(var(--color-silver-100))',
+  				200: 'hsl(var(--color-silver-200))',
+  				300: 'hsl(var(--color-silver-300))',
+  				400: 'hsl(var(--color-silver-400))',
+  				500: 'hsl(var(--color-silver-500))',
+  				600: 'hsl(var(--color-silver-600))',
+  				700: 'hsl(var(--color-silver-700))',
+  				800: 'hsl(var(--color-silver-800))',
+  				900: 'hsl(var(--color-silver-900))'
   			}
   		},
   		borderRadius: {

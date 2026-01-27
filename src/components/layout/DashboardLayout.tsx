@@ -16,6 +16,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/navigation/Breadcrumbs";
+import { CommandPalette } from "@/components/command/CommandPalette";
 import luxuryLightBg from "@/assets/luxury-hotel-light-bg.jpg";
 
 interface DashboardLayoutProps {
@@ -79,6 +81,7 @@ export function DashboardLayout({
 
   return (
     <SidebarProvider>
+      <CommandPalette />
       <div className="min-h-screen flex w-full">
         <AppSidebar role={role} />
         <div className="flex-1 flex flex-col relative">

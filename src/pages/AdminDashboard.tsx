@@ -97,15 +97,15 @@ const AdminDashboard = () => {
     });
     const [deletingTechnician, setDeletingTechnician] = useState(false);
 
-    // ✅ Détecter la route active pour afficher le bon contenu
+    // Detect active route to display correct content
     const currentView = useMemo(() => {
         const path = location.pathname;
         if (path.includes('/tickets')) return 'tickets';
         if (path.includes('/technicians')) return 'technicians';
         if (path.includes('/escalations')) return 'escalations';
-        if (path.includes('/payment')) return 'payments'; // Note: menu utilise "payment" mais on garde "payments" pour la cohérence
+        if (path.includes('/payment')) return 'payments'; // Note: menu uses "payment" but keep "payments" for consistency
         if (path.includes('/reports')) return 'reports';
-        return 'dashboard'; // Par défaut, afficher le tableau de bord
+        return 'dashboard'; // Default: show dashboard
     }, [location.pathname]);
 
     const fetchTickets = useCallback(async (hotelIdParam: string) => {
@@ -119,7 +119,7 @@ const AdminDashboard = () => {
             // Initialize with empty array so dashboard still displays
             setTickets([]);
 
-            // Si c'est une erreur 402 (Payment Required), afficher un message spécifique
+            // If 402 error (Payment Required), show specific message
             if (errorMessage.includes("402") || errorMessage.includes("Payment Required") || errorMessage.includes("Paiement")) {
                 toast({
                     title: "Paiement en retard",
@@ -171,7 +171,7 @@ const AdminDashboard = () => {
         } catch (error: unknown) {
             setTechnicians([]);
 
-            // Message d'erreur plus spécifique
+            // More specific error message
             const errorMessage = error instanceof Error ? error.message : "Impossible de charger les techniciens";
             const isConnectionError = errorMessage.includes('backend n\'est pas accessible') ||
                 errorMessage.includes('ERR_CONNECTION_REFUSED') ||
@@ -212,7 +212,7 @@ const AdminDashboard = () => {
         }
     }, []);
 
-    // Fonction pour assigner un technicien à un ticket
+    // Function to assign technician to ticket
     const handleAssignTechnician = useCallback(async (ticketId: string, technicianId: string) => {
         if (!user?.userId) return;
 
@@ -246,27 +246,27 @@ const AdminDashboard = () => {
 
         let filtered = technicians;
 
-        // Filtrage par catégorie du ticket (si un ticket est sélectionné)
-        // Les spécialités des techniciens contiennent maintenant les noms des catégories
+        // Filter by ticket category (if ticket selected)
+        // Technician specialties now contain category names
         if (selectedTicket?.categoryName) {
             const ticketCategoryName = selectedTicket.categoryName.trim();
 
-            // Filtrer les techniciens qui ont cette catégorie dans leurs spécialités
+            // Filter technicians who have this category in specialties
             filtered = filtered.filter((tech: Technician) => {
-                // Si le technicien n'a pas de spécialités, ne pas l'inclure (il doit avoir des catégories)
+                // If technician has no specialties, exclude (must have categories)
                 if (!tech.specialties || tech.specialties.length === 0) {
                     return false;
                 }
 
-                // Vérifier si le technicien a exactement cette catégorie dans ses spécialités
-                // Les spécialités stockent les noms des catégories
+                // Check if technician has exactly this category in specialties
+                // Specialties store category names
                 return tech.specialties.some((specialty: string) =>
                     specialty.trim().toLowerCase() === ticketCategoryName.toLowerCase()
                 );
             });
         }
 
-        // Filtrage par recherche de spécialité
+        // Filter by specialty search
         if (specialtySearch.trim()) {
             const searchLower = specialtySearch.toLowerCase().trim();
             filtered = filtered.filter((tech: Technician) => {
@@ -274,7 +274,7 @@ const AdminDashboard = () => {
                 const nameMatch = tech.fullName?.toLowerCase().includes(searchLower) ||
                     tech.email?.toLowerCase().includes(searchLower);
 
-                // Rechercher dans les spécialités
+                // Search in specialties
                 const specialtyMatch = tech.specialties?.some((specialty: string) =>
                     specialty.toLowerCase().includes(searchLower)
                 ) || false;
@@ -288,9 +288,9 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         if (!authLoading && user?.userId && hotelId) {
-            // Charger les tickets en priorité (nécessaire pour le dashboard)
+            // Load tickets first (required for dashboard)
             fetchTickets(hotelId);
-            // Charger l'hôtel en arrière-plan (optionnel, ne bloque pas l'affichage)
+            // Load hotel in background (optional, doesn't block display)
             fetchHotel(hotelId);
             // Charger les techniciens pour le dashboard
             fetchTechnicians(hotelId);
@@ -298,7 +298,7 @@ const AdminDashboard = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authLoading, user?.userId, hotelId]);
 
-    // Charger les données spécifiques selon la vue active
+    // Load specific data based on active view
     useEffect(() => {
         if (authLoading || !hotelId) return;
 
@@ -335,7 +335,7 @@ const AdminDashboard = () => {
         return { total, open, inProgress, resolved, escalated, urgent };
     }, [tickets]);
 
-    // Données pour le graphique en donut (tickets par statut)
+    // Data for donut chart (tickets by status)
     const statusChartData = useMemo(() => {
         const statusCounts = {
             'OPEN': tickets.filter(t => t.status === 'OPEN').length,
@@ -354,7 +354,7 @@ const AdminDashboard = () => {
         ].filter(item => item.value > 0);
     }, [tickets]);
 
-    // Données pour le graphique d'évolution sur 7 jours
+    // Data for 7-day trend chart
     const evolutionData = useMemo(() => {
         const days = ['Samedi', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
         const today = new Date();
@@ -380,7 +380,7 @@ const AdminDashboard = () => {
         return data;
     }, [tickets]);
 
-    // Données pour le graphique de performance des techniciens
+    // Data for technician performance chart
     const technicianPerformanceData = useMemo(() => {
         const techMap = new Map<string, { assigned: number; resolved: number }>();
 
@@ -405,7 +405,7 @@ const AdminDashboard = () => {
         }));
     }, [tickets]);
 
-    // Tickets récents (5 derniers)
+    // Recent tickets (last 5)
     const recentTickets = useMemo(() => {
         return [...tickets]
             .sort((a, b) => {
@@ -690,7 +690,7 @@ const AdminDashboard = () => {
         </div>
     );
 
-    // Vue Tickets avec table formatée
+    // Tickets view with formatted table
     const TicketsView = () => {
         const [advancedFilters, setAdvancedFilters] = useState<FilterState>({
             search: "",
@@ -703,7 +703,7 @@ const AdminDashboard = () => {
         });
         const showUrgent = new URLSearchParams(location.search).get('urgent') === 'true';
 
-        // Préparer les catégories pour les filtres
+        // Prepare categories for filters
         const categoriesForFilters = useMemo(() => {
             const uniqueCategories = new Map();
             filteredTickets.forEach(ticket => {
@@ -727,7 +727,7 @@ const AdminDashboard = () => {
                 filtered = filtered.filter(t => t.isUrgent);
             }
 
-            // Filtres avancés
+            // Advanced filters
             if (advancedFilters.search) {
                 const search = advancedFilters.search.toLowerCase();
                 filtered = filtered.filter(t =>
@@ -956,7 +956,7 @@ const AdminDashboard = () => {
                                         </TableRow>
                                     ) : (
                                         technicians.map((tech: Technician, index: number) => {
-                                            // Utiliser un identifiant unique pour la clé
+                                            // Use unique identifier for key
                                             const techKey = tech.id || tech.userId || `tech-${index}`;
                                             return (
                                                 <TableRow key={techKey}>
@@ -1177,7 +1177,7 @@ const AdminDashboard = () => {
     const PaymentsView = () => {
         const [searchParams] = useSearchParams();
 
-        // Vérifier si l'utilisateur revient de Stripe
+        // Check if user returns from Stripe
         useEffect(() => {
             const success = searchParams.get('success');
             const canceled = searchParams.get('canceled');
@@ -1216,7 +1216,7 @@ const AdminDashboard = () => {
             id: p.id,
             name: p.name,
             price: p.baseCost,
-            icon: p.name === 'BASIC' || p.name === 'Starter' ? Zap : p.name === 'PRO' || p.name === 'Pro' ? Star : Crown,
+            icon: p.name === 'STARTER' || p.name === 'Starter' ? Zap : p.name === 'PRO' || p.name === 'Pro' ? Star : Crown,
             features: [
                 `${p.ticketQuota} tickets par mois`,
                 p.maxTechnicians === 999 ? 'Techniciens illimités' : `${p.maxTechnicians} techniciens maximum`,
@@ -1331,7 +1331,7 @@ const AdminDashboard = () => {
                                             disabled={isCurrent || loadingSubscription}
                                             onClick={async () => {
                                                 if (!isCurrent && hotelId) {
-                                                    // Vérifier que le plan a un ID valide (UUID)
+                                                    // Verify plan has valid ID (UUID)
                                                     if (!plan.id || plan.id.length < 30) {
                                                         toast({
                                                             title: "Erreur",
@@ -1349,7 +1349,7 @@ const AdminDashboard = () => {
                                                     } catch (error: unknown) {
                                                         const errorMessage = error instanceof Error ? error.message : "Impossible de créer la session de paiement";
 
-                                                        // Vérifier si c'est une erreur de connexion
+                                                        // Check if connection error
                                                         if (errorMessage.includes("Failed to fetch") || errorMessage.includes("ERR_CONNECTION_REFUSED") || errorMessage.includes("NetworkError")) {
                                                             toast({
                                                                 title: "Backend non disponible",
@@ -1392,7 +1392,7 @@ const AdminDashboard = () => {
         );
     };
 
-    // Vue Rapports avec cartes de téléchargement
+    // Reports view with download cards
     const ReportsView = () => {
         const [loadingReport, setLoadingReport] = useState(false);
 
@@ -1840,7 +1840,7 @@ const AdminDashboard = () => {
                                         description: "Le technicien a été créé avec succès",
                                     });
 
-                                    // Réinitialiser le formulaire
+                                    // Reset form
                                     setNewTechnician({ email: "", password: "", fullName: "", phone: "" });
                                     setAddTechnicianDialogOpen(false);
 
@@ -2003,7 +2003,7 @@ const AdminDashboard = () => {
                                         description: "Le technicien a été modifié avec succès",
                                     });
 
-                                    // Réinitialiser le formulaire
+                                    // Reset form
                                     setEditTechnicianForm({ email: "", fullName: "", phone: "", password: "", isActive: true });
                                     setEditTechnicianDialogOpen(false);
                                     setSelectedTechnicianForEdit(null);

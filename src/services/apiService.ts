@@ -1,7 +1,7 @@
-// Configuration de l'API
+// API configuration
 import { API_BASE_URL } from '@/config';
 
-// Interface pour la réponse d'authentification
+// Authentication response interface
 export interface AuthResponse {
   token: string;
   email: string;
@@ -11,7 +11,7 @@ export interface AuthResponse {
   hotelId: string | null;
 }
 
-// Interface pour la réponse de ticket
+// Ticket response interface
 export interface TicketResponse {
   id: string;
   ticketNumber: string;
@@ -192,14 +192,36 @@ export interface ReportData {
   [key: string]: string | number | unknown;
 }
 
-// Utilitaire pour headers sans authentification (dev)
+// Utilitaire pour headers avec authentification
 const getAuthHeaders = () => {
-  return {
+  const token = localStorage.getItem('auth_token');
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    
+    // Development mode: add email in header for "dev-token"
+    if (token === 'dev-token') {
+      try {
+        const userDataStr = localStorage.getItem('user_data');
+        if (userDataStr) {
+          const userData = JSON.parse(userDataStr);
+          if (userData.email) {
+            headers['X-User-Email'] = userData.email;
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing user_data for dev-token:', error);
+      }
+    }
+  }
+  
+  return headers;
 };
 
-// Utilitaire pour headers multipart sans authentification (dev)
+// Utility for multipart headers without authentication (dev)
 const getMultipartHeaders = () => {
   return {};
 };
@@ -215,18 +237,18 @@ export const apiService = {
     });
 
     if (!response.ok) {
-      // ✅ Récupérer le message d'erreur du backend
-      let errorMessage = 'Erreur de connexion';
+      // Get error message from backend
+      let errorMessage = 'Connection error';
       try {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-          // Le backend retourne du JSON
+          // Backend returns JSON
           const errorJson = await response.json();
-          errorMessage = errorJson.message || errorJson.error || 'Email ou mot de passe incorrect';
+          errorMessage = errorJson.message || errorJson.error || 'Email or password incorrect';
         } else {
-          // Le backend retourne du texte brut
+          // Backend returns plain text
           const errorText = await response.text();
-          errorMessage = errorText || 'Email ou mot de passe incorrect';
+          errorMessage = errorText || 'Email or password incorrect';
         }
       } catch (parseError) {
         errorMessage = 'Email or password incorrect';
@@ -254,8 +276,20 @@ export const apiService = {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error('Registration failed');
+      let errorMessage = 'Registration failed';
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorJson = await response.json();
+          errorMessage = errorJson.message || errorJson.error || errorMessage;
+        } else {
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        }
+      } catch (parseError) {
+        // Use default message if parsing fails
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -263,7 +297,7 @@ export const apiService = {
   },
 
   logout() {
-    // Désactivé pour le développement
+    // Disabled for development
   },
 
   // Hotels
@@ -277,7 +311,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ SuperAdmin - Récupérer tous les hôtels
+  // SuperAdmin - Get all hotels
   async getAllHotels(): Promise<Hotel[]> {
     const response = await fetch(`${API_BASE_URL}/hotels`, {
       headers: getAuthHeaders(),
@@ -308,7 +342,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Récupérer l'abonnement actuel d'un hôtel
+  // Get current hotel subscription
   async getHotelSubscription(hotelId: string): Promise<Subscription> {
     const response = await fetch(`${API_BASE_URL}/subscriptions/hotel/${hotelId}`, {
       headers: getAuthHeaders(),
@@ -321,7 +355,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Créer une session Stripe Checkout
+  // Create Stripe Checkout session
   async createStripeCheckoutSession(hotelId: string, planId: string): Promise<{ sessionId: string; url: string }> {
     const response = await fetch(`${API_BASE_URL}/stripe/create-checkout-session?hotelId=${hotelId}&planId=${planId}`, {
       method: 'POST',
@@ -332,7 +366,7 @@ export const apiService = {
       const error = await response.json().catch(() => ({ error: 'Failed to create checkout session' }));
       const errorMessage = error.error || error.message || 'Failed to create checkout session';
 
-      // Message d'erreur plus clair pour les clés API invalides
+      // Clearer error message for invalid API keys
       if (errorMessage.includes('Invalid API Key') || errorMessage.includes('sk_test_your_secret_key_here')) {
         throw new Error('Clé API Stripe non configurée. Veuillez configurer vos clés Stripe dans application.properties et redémarrer le backend.');
       }
@@ -343,7 +377,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Créer un nouvel hôtel (SuperAdmin)
+  // Create new hotel (SuperAdmin)
   async createHotel(hotelData: {
     name: string;
     email?: string;
@@ -371,7 +405,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Récupérer tous les plans d'abonnement
+  // Get all subscription plans
   async getAllPlans(): Promise<Plan[]> {
     const response = await fetch(`${API_BASE_URL}/plans`, {
       headers: getAuthHeaders(),
@@ -384,7 +418,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Statistiques des plans
+  // Plan statistics
   async getPlanStatistics(): Promise<{
     total: number;
     avgPrice: number;
@@ -413,7 +447,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Créer une nouvelle catégorie
+  // Create new category
   async createCategory(category: {
     name: string;
     icon?: string;
@@ -438,7 +472,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Logs d'audit
+  // Audit logs
   async getAllAuditLogs(): Promise<AuditLog[]> {
     const response = await fetch(`${API_BASE_URL}/audit-logs/all`, {
       headers: getAuthHeaders(),
@@ -468,12 +502,12 @@ export const apiService = {
   }, images?: File[]): Promise<TicketResponse> {
     const formData = new FormData();
 
-    // Ajouter les données du ticket comme JSON
+    // Add ticket data as JSON
     formData.append('ticket', new Blob([JSON.stringify(ticketData)], {
       type: 'application/json'
     }));
 
-    // Ajouter les images si présentes
+    // Add images if present
     if (images && images.length > 0) {
       images.forEach((image) => {
         formData.append('images', image);
@@ -487,8 +521,8 @@ export const apiService = {
     });
 
     if (!response.ok) {
-      // Essayer de récupérer le message d'erreur du backend
-      let errorMessage = 'Impossible de créer le ticket';
+      // Try to get error message from backend
+      let errorMessage = 'Failed to create ticket';
       try {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -582,7 +616,7 @@ export const apiService = {
       headers: getAuthHeaders(),
     });
 
-    // Désactivé pour le développement : pas de gestion de session
+    // Disabled for development: no session management
     if (!response.ok) {
       throw new Error('Failed to fetch tickets');
     }
@@ -596,23 +630,32 @@ export const apiService = {
     userId: string,
     technicianId?: string
   ): Promise<TicketResponse> {
+    console.log('DEBUG - updateTicketStatus called:', { ticketId, status, userId, technicianId });
+    
+    const headers = getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+    
     const response = await fetch(
       `${API_BASE_URL}/tickets/${ticketId}/status?userId=${userId}`,
       {
         method: 'PATCH',
-        headers: getAuthHeaders(),
+        headers: headers,
         body: JSON.stringify({ status, technicianId }),
       }
     );
 
+    console.log('DEBUG - updateTicketStatus response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error('Failed to update ticket status');
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('DEBUG - updateTicketStatus error:', errorText);
+      throw new Error(`Failed to update ticket status: ${errorText}`);
     }
 
     return response.json();
   },
 
-  // ✅ SuperAdmin - Récupérer tous les tickets
+  // SuperAdmin - Get all tickets
   async getAllTickets(): Promise<TicketResponse[]> {
     const response = await fetch(`${API_BASE_URL}/tickets/all`, {
       headers: getAuthHeaders(),
@@ -631,7 +674,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ SuperAdmin - Récupérer tous les utilisateurs
+  // SuperAdmin - Get all users
   async getAllUsers(): Promise<User[]> {
     const response = await fetch(`${API_BASE_URL}/users`, {
       headers: getAuthHeaders(),
@@ -650,7 +693,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Admin - Récupérer les techniciens d'un hôtel
+  // Admin - Get technicians for a hotel
   async getTechniciansByHotel(hotelId: string): Promise<Technician[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/users/hotel/${hotelId}/technicians`, {
@@ -673,7 +716,7 @@ export const apiService = {
 
       return response.json();
     } catch (error: unknown) {
-      // Gérer les erreurs de connexion réseau
+      // Handle network connection errors
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_CONNECTION_REFUSED')) {
         throw new Error('Le serveur backend n\'est pas accessible. Vérifiez qu\'il est démarré sur http://localhost:8080');
@@ -682,7 +725,7 @@ export const apiService = {
     }
   },
 
-  // ✅ Admin - Créer un nouveau technicien
+  // Admin - Create new technician
   async createTechnician(technicianData: {
     email: string;
     password: string;
@@ -713,7 +756,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Admin - Modifier un technicien
+  // Admin - Update technician
   async updateTechnician(technicianId: string, technicianData: {
     email?: string;
     fullName?: string;
@@ -744,7 +787,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Admin - Supprimer un technicien
+  // Admin - Delete technician
   async deleteTechnician(technicianId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/users/technicians/${technicianId}`, {
       method: 'DELETE',
@@ -763,7 +806,7 @@ export const apiService = {
     }
   },
 
-  // ✅ Commentaires sur tickets
+  // Ticket comments
   async getTicketComments(ticketId: string): Promise<TicketComment[]> {
     const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/comments`, {
       headers: getAuthHeaders(),
@@ -806,7 +849,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ SuperAdmin - Récupérer les paiements en retard
+  // SuperAdmin - Get overdue payments
   async getOverduePayments(): Promise<Payment[]> {
     const response = await fetch(`${API_BASE_URL}/payments/overdue`, {
       headers: getAuthHeaders(),
@@ -825,7 +868,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Récupérer tous les paiements (pour SuperAdmin)
+  // Get all payments (for SuperAdmin)
   async getAllPayments(): Promise<Payment[]> {
     const response = await fetch(`${API_BASE_URL}/payments/all`, {
       headers: getAuthHeaders(),
@@ -844,7 +887,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Rapports - Mensuel pour un hôtel
+  // Reports - Monthly for a hotel
   async getMonthlyReport(hotelId: string, year?: number, month?: number): Promise<ReportData> {
     const params = new URLSearchParams();
     if (year) params.append('year', year.toString());
@@ -861,7 +904,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Rapports - Hebdomadaire pour un hôtel
+  // Reports - Weekly for a hotel
   async getWeeklyReport(hotelId: string, startDate?: string): Promise<ReportData> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
@@ -877,7 +920,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Rapports - Quotidien pour un hôtel
+  // Reports - Daily for a hotel
   async getDailyReport(hotelId: string, date?: string): Promise<ReportData> {
     const params = new URLSearchParams();
     if (date) params.append('date', date);
@@ -893,7 +936,7 @@ export const apiService = {
     return response.json();
   },
 
-  // ✅ Rapports - Global (SuperAdmin uniquement)
+  // Reports - Global (SuperAdmin only)
   async getGlobalReport(startDate?: string, endDate?: string): Promise<ReportData> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
@@ -911,22 +954,65 @@ export const apiService = {
   },
 
   // ============================================
-  // RGPD - Conformité et Protection des Données
+  // GDPR - Compliance and Data Protection
   // ============================================
 
   // Consentement RGPD
   async recordGdprConsent(consentType: string, consented: boolean): Promise<GdprConsent> {
-    const response = await fetch(`${API_BASE_URL}/gdpr/consent`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ consentType, consented }),
-    });
+    try {
+      console.log('recordGdprConsent called:', { consentType, consented });
+      
+      const headers = getAuthHeaders();
+      headers['Content-Type'] = 'application/json';
+      
+      const response = await fetch(`${API_BASE_URL}/gdpr/consent`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ consentType, consented }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to record GDPR consent');
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to record GDPR consent';
+        try {
+          const errorText = await response.text();
+          console.log('Error response text:', errorText);
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch {
+              errorMessage = errorText || `Erreur ${response.status}: ${response.statusText}`;
+            }
+          }
+        } catch {
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const text = await response.text();
+      console.log('Response text length:', text.length);
+      
+      if (!text || text.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+
+      try {
+        const data = JSON.parse(text);
+        console.log('Parsed consent data:', data);
+        return data;
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        // If JSON is malformed, try to return minimal object
+        throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error in recordGdprConsent:', error);
+      throw error;
     }
-
-    return response.json();
   },
 
   async getUserConsents(): Promise<GdprConsent[]> {
@@ -935,26 +1021,112 @@ export const apiService = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch GDPR consents');
+      let errorMessage = 'Failed to fetch GDPR consents';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();
   },
 
-  // Export des données personnelles
+  // Get available consents by role
+  async getAvailableConsents(): Promise<{ role: string; availableConsents: Array<{ id: string; label: string; description: string; required: boolean }> }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/gdpr/available-consents`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to fetch available consents';
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch {
+              errorMessage = errorText || `Erreur ${response.status}: ${response.statusText}`;
+            }
+          }
+        } catch {
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const text = await response.text();
+      console.log('Response text:', text);
+      
+      if (!text || text.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+
+      try {
+        const data = JSON.parse(text);
+        console.log('Parsed data:', data);
+        return data;
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Response text:', text);
+        throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error in getAvailableConsents:', error);
+      throw error;
+    }
+  },
+
+  // Export personal data
   async exportUserData(): Promise<GdprDataExport> {
-    const response = await fetch(`${API_BASE_URL}/gdpr/export`, {
-      headers: getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/gdpr/export`, {
+        headers: getAuthHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to export user data');
+      if (!response.ok) {
+        let errorMessage = 'Failed to export user data';
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            try {
+              const errorData = JSON.parse(errorText);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch {
+              errorMessage = errorText || `Erreur ${response.status}: ${response.statusText}`;
+            }
+          }
+        } catch {
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Pour les gros fichiers JSON, utiliser text() puis parse
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        throw new Error('Empty response from server');
+      }
+
+      try {
+        const data = JSON.parse(text);
+        return data;
+      } catch (parseError) {
+        console.error('JSON parse error in export:', parseError);
+        // If JSON is too large, try to download directly
+        throw new Error(`Erreur lors du parsing des données exportées. Le fichier est peut-être trop volumineux.`);
+      }
+    } catch (error) {
+      console.error('Error in exportUserData:', error);
+      throw error;
     }
-
-    return response.json();
   },
 
-  // Demande de suppression (Droit à l'oubli)
+  // Deletion request (Right to be forgotten)
   async requestDataDeletion(): Promise<GdprDeletionRequest> {
     const response = await fetch(`${API_BASE_URL}/gdpr/deletion-request`, {
       method: 'POST',

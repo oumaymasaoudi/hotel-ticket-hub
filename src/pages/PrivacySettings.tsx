@@ -20,7 +20,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-const CONSENT_TYPES = [
+// Default consents (will be replaced by backend based on role)
+const DEFAULT_CONSENT_TYPES = [
   {
     id: 'DATA_PROCESSING',
     label: 'Traitement des données personnelles',
@@ -51,15 +52,47 @@ const PrivacySettings = () => {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [consents, setConsents] = useState<GdprConsent[]>([]);
+  const [consentTypes, setConsentTypes] = useState(DEFAULT_CONSENT_TYPES);
+  const [userRole, setUserRole] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) {
+      fetchAvailableConsents();
       fetchConsents();
     }
   }, [authLoading, user]);
+
+  const fetchAvailableConsents = async () => {
+    try {
+      console.log('Fetching available consents...');
+      const data = await apiService.getAvailableConsents();
+      console.log('Available consents data:', data);
+      
+      if (data && data.role) {
+        setUserRole(data.role);
+        console.log('User role set to:', data.role);
+      }
+      
+      if (data && data.availableConsents && Array.isArray(data.availableConsents)) {
+        setConsentTypes(data.availableConsents);
+        console.log('Consent types set:', data.availableConsents.length);
+      } else {
+        console.warn('No available consents in response, using defaults');
+        setConsentTypes(DEFAULT_CONSENT_TYPES);
+      }
+    } catch (error) {
+      console.error('Error fetching available consents:', error);
+      // On error, use default consents
+      setConsentTypes(DEFAULT_CONSENT_TYPES);
+      // Try to get role from connected user
+      if (user?.role) {
+        setUserRole(user.role);
+      }
+    }
+  };
 
   const fetchConsents = async () => {
     try {
@@ -67,22 +100,63 @@ const PrivacySettings = () => {
       setConsents(data);
     } catch (error) {
       console.error('Error fetching consents:', error);
+      // Don't show toast for initial loading errors
+      // to avoid spamming user if not connected
+      if (user) {
+        toast({
+          title: "Erreur",
+          description: error instanceof Error ? error.message : "Impossible de charger vos consentements",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   const updateConsent = async (consentType: string, consented: boolean) => {
+    console.log('Updating consent:', consentType, consented);
     setLoading(true);
     try {
-      await apiService.recordGdprConsent(consentType, consented);
-      await fetchConsents();
+      const result = await apiService.recordGdprConsent(consentType, consented);
+      console.log('Consent updated successfully:', result);
+      
+      // Update consents locally immediately
+      setConsents(prev => {
+        const existing = prev.find(c => c.consentType === consentType);
+        if (existing) {
+          return prev.map(c => 
+            c.consentType === consentType 
+              ? { ...c, consented, updatedAt: new Date().toISOString() }
+              : c
+          );
+        } else {
+          return [...prev, {
+            id: result.id || '',
+            userId: user?.userId || '',
+            consentType,
+            consented,
+            consentDate: new Date().toISOString(),
+            privacyPolicyVersion: result.privacyPolicyVersion || '1.0',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }];
+        }
+      });
+      
       toast({
         title: "Consentement mis à jour",
-        description: `Votre consentement pour "${CONSENT_TYPES.find(c => c.id === consentType)?.label}" a été ${consented ? 'accordé' : 'révoqué'}.`,
+        description: `Votre consentement pour "${consentTypes.find(c => c.id === consentType)?.label}" a été ${consented ? 'accordé' : 'révoqué'}.`,
       });
+      
+      // Reload consents from server
+      await fetchConsents();
     } catch (error) {
+      console.error('Error updating consent:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Impossible de mettre à jour le consentement. Veuillez vérifier votre connexion.";
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible de mettre à jour le consentement",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -93,10 +167,13 @@ const PrivacySettings = () => {
   const handleExportData = async () => {
     setExporting(true);
     try {
+      console.log('Starting data export...');
       const data: GdprDataExport = await apiService.exportUserData();
+      console.log('Data exported successfully:', data);
       
-      // Créer un fichier JSON téléchargeable
-      const blob = new Blob([JSON.stringify(data.data, null, 2)], { type: 'application/json' });
+      // Create downloadable JSON file
+      const jsonString = JSON.stringify(data.data || data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -111,9 +188,13 @@ const PrivacySettings = () => {
         description: "Vos données personnelles ont été téléchargées.",
       });
     } catch (error) {
+      console.error('Error exporting data:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Impossible d'exporter vos données. Vérifiez votre connexion.";
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Impossible d'exporter vos données",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -171,7 +252,7 @@ const PrivacySettings = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {CONSENT_TYPES.map((consentType) => {
+            {consentTypes.map((consentType) => {
               const isConsented = getConsentStatus(consentType.id);
               const isRequired = consentType.required;
 

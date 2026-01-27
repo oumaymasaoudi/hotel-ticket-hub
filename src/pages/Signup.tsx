@@ -146,7 +146,7 @@ const Signup = () => {
         fullName: formData.fullName,
         phone: formData.phone,
         role: formData.role,
-        hotelId: formData.role === "admin" ? formData.hotelId : undefined, // Seulement pour les admins
+        hotelId: formData.role === "admin" || formData.role === "technician" ? formData.hotelId : undefined, // Requis pour admins et techniciens
         specialties:
           formData.role === "technician" ? selectedCategories : undefined, // Stocker les noms des catégories comme spécialités
       });
@@ -244,9 +244,9 @@ const Signup = () => {
             </Select>
           </div>
 
-          {/* Admin doit sélectionner un hôtel (règle de gestion) */}
-          {/* Les techniciens travaillent pour tous les hôtels, pas besoin de sélectionner */}
-          {formData.role === "admin" && (
+          {/* Admin et Technicien doivent sélectionner un hôtel (règle de gestion) */}
+          {/* Règle: "Un utilisateur (technicien ou admin) est rattaché à un hôtel via son HotelID" */}
+          {(formData.role === "admin" || formData.role === "technician") && (
             <div>
               <Label htmlFor="hotel">Hôtel *</Label>
               {hotels.length === 0 ? (
@@ -255,7 +255,7 @@ const Signup = () => {
                     ⚠️ Aucun hôtel disponible
                   </p>
                   <p className="text-xs text-muted-foreground mb-2">
-                    Pour créer un compte admin, vous devez d'abord créer un hôtel :
+                    Pour créer un compte {formData.role === "admin" ? "admin" : "technicien"}, vous devez d'abord créer un hôtel :
                   </p>
                   <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                     <li>Connectez-vous en tant que <strong>SuperAdmin</strong></li>

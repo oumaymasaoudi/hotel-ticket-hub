@@ -7,7 +7,7 @@ import { Plan, Category } from "@/services/apiService";
 export const DEFAULT_PLANS: Plan[] = [
   {
     id: "550e8400-e29b-41d4-a716-446655440001",
-    name: "BASIC",
+    name: "STARTER",
     baseCost: 49.99,
     ticketQuota: 50,
     excessTicketCost: 2.50,

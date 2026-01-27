@@ -1,0 +1,183 @@
+/* Enhanced Color Palette System */
+
+:root {
+  /* Primary Colors - Navy Blue Variations */
+  --color-navy-50: 240 73% 98%;
+  --color-navy-100: 240 73% 95%;
+  --color-navy-200: 240 73% 90%;
+  --color-navy-300: 240 73% 80%;
+  --color-navy-400: 240 73% 60%;
+  --color-navy-500: 240 73% 40%;
+  --color-navy-600: 240 73% 30%;
+  --color-navy-700: 240 73% 23%;
+  --color-navy-800: 240 73% 18%;
+  --color-navy-900: 240 73% 10%;
+
+  /* Gold Variations */
+  --color-gold-50: 42 80% 98%;
+  --color-gold-100: 42 80% 95%;
+  --color-gold-200: 42 80% 90%;
+  --color-gold-300: 42 80% 80%;
+  --color-gold-400: 42 80% 70%;
+  --color-gold-500: 42 80% 60%;
+  --color-gold-600: 42 80% 52%;
+  --color-gold-700: 42 80% 45%;
+  --color-gold-800: 38 75% 40%;
+  --color-gold-900: 38 75% 35%;
+
+  /* Silver Variations */
+  --color-silver-50: 220 20% 98%;
+  --color-silver-100: 220 20% 95%;
+  --color-silver-200: 220 20% 90%;
+  --color-silver-300: 220 20% 85%;
+  --color-silver-400: 220 20% 78%;
+  --color-silver-500: 220 20% 70%;
+  --color-silver-600: 220 20% 60%;
+  --color-silver-700: 220 20% 50%;
+  --color-silver-800: 220 20% 40%;
+  --color-silver-900: 220 20% 30%;
+
+  /* Accent Colors - Rich Palette */
+  --color-emerald-500: 158 64% 52%;
+  --color-emerald-600: 158 64% 45%;
+  --color-teal-500: 173 80% 40%;
+  --color-teal-600: 173 80% 35%;
+  --color-rose-500: 346 77% 50%;
+  --color-rose-600: 346 77% 45%;
+  --color-purple-500: 262 83% 58%;
+  --color-purple-600: 262 83% 52%;
+  --color-indigo-500: 239 84% 67%;
+  --color-indigo-600: 239 84% 60%;
+  --color-amber-500: 43 96% 56%;
+  --color-amber-600: 43 96% 50%;
+  --color-cyan-500: 188 94% 43%;
+  --color-cyan-600: 188 94% 38%;
+
+  /* Status Colors */
+  --color-success: 142 71% 45%;
+  --color-success-light: 142 71% 55%;
+  --color-warning: 43 96% 56%;
+  --color-warning-light: 43 96% 65%;
+  --color-error: 0 72% 50%;
+  --color-error-light: 0 72% 60%;
+  --color-info: 199 89% 48%;
+  --color-info-light: 199 89% 58%;
+
+  /* Gradient Definitions */
+  --gradient-primary: linear-gradient(135deg, hsl(240 73% 23%) 0%, hsl(240 73% 10%) 100%);
+  --gradient-gold: linear-gradient(135deg, hsl(42 80% 55%) 0%, hsl(38 75% 45%) 100%);
+  --gradient-silver: linear-gradient(135deg, hsl(220 20% 85%) 0%, hsl(220 15% 70%) 100%);
+  --gradient-ocean: linear-gradient(135deg, hsl(199 89% 48%) 0%, hsl(173 80% 40%) 100%);
+  --gradient-sunset: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(346 77% 50%) 100%);
+  --gradient-purple: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(239 84% 67%) 100%);
+  --gradient-emerald: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(142 71% 45%) 100%);
+}
+
+/* Color Utility Classes */
+.bg-navy-50 { background-color: hsl(var(--color-navy-50)); }
+.bg-navy-100 { background-color: hsl(var(--color-navy-100)); }
+.bg-navy-200 { background-color: hsl(var(--color-navy-200)); }
+.bg-navy-300 { background-color: hsl(var(--color-navy-300)); }
+.bg-navy-400 { background-color: hsl(var(--color-navy-400)); }
+.bg-navy-500 { background-color: hsl(var(--color-navy-500)); }
+.bg-navy-600 { background-color: hsl(var(--color-navy-600)); }
+.bg-navy-700 { background-color: hsl(var(--color-navy-700)); }
+.bg-navy-800 { background-color: hsl(var(--color-navy-800)); }
+.bg-navy-900 { background-color: hsl(var(--color-navy-900)); }
+
+.bg-gold-50 { background-color: hsl(var(--color-gold-50)); }
+.bg-gold-100 { background-color: hsl(var(--color-gold-100)); }
+.bg-gold-200 { background-color: hsl(var(--color-gold-200)); }
+.bg-gold-300 { background-color: hsl(var(--color-gold-300)); }
+.bg-gold-400 { background-color: hsl(var(--color-gold-400)); }
+.bg-gold-500 { background-color: hsl(var(--color-gold-500)); }
+.bg-gold-600 { background-color: hsl(var(--color-gold-600)); }
+.bg-gold-700 { background-color: hsl(var(--color-gold-700)); }
+.bg-gold-800 { background-color: hsl(var(--color-gold-800)); }
+.bg-gold-900 { background-color: hsl(var(--color-gold-900)); }
+
+.bg-silver-50 { background-color: hsl(var(--color-silver-50)); }
+.bg-silver-100 { background-color: hsl(var(--color-silver-100)); }
+.bg-silver-200 { background-color: hsl(var(--color-silver-200)); }
+.bg-silver-300 { background-color: hsl(var(--color-silver-300)); }
+.bg-silver-400 { background-color: hsl(var(--color-silver-400)); }
+.bg-silver-500 { background-color: hsl(var(--color-silver-500)); }
+.bg-silver-600 { background-color: hsl(var(--color-silver-600)); }
+.bg-silver-700 { background-color: hsl(var(--color-silver-700)); }
+.bg-silver-800 { background-color: hsl(var(--color-silver-800)); }
+.bg-silver-900 { background-color: hsl(var(--color-silver-900)); }
+
+/* Gradient Backgrounds */
+.bg-gradient-ocean {
+  background: var(--gradient-ocean);
+}
+
+.bg-gradient-sunset {
+  background: var(--gradient-sunset);
+}
+
+.bg-gradient-purple {
+  background: var(--gradient-purple);
+}
+
+.bg-gradient-emerald {
+  background: var(--gradient-emerald);
+}
+
+/* Text Gradients */
+.text-gradient-ocean {
+  background: var(--gradient-ocean);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-sunset {
+  background: var(--gradient-sunset);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-purple {
+  background: var(--gradient-purple);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-emerald {
+  background: var(--gradient-emerald);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Border Colors */
+.border-navy { border-color: hsl(var(--color-navy-600)); }
+.border-gold { border-color: hsl(var(--color-gold-600)); }
+.border-silver { border-color: hsl(var(--color-silver-400)); }
+.border-emerald { border-color: hsl(var(--color-emerald-500)); }
+.border-teal { border-color: hsl(var(--color-teal-500)); }
+.border-rose { border-color: hsl(var(--color-rose-500)); }
+.border-purple { border-color: hsl(var(--color-purple-500)); }
+.border-indigo { border-color: hsl(var(--color-indigo-500)); }
+.border-amber { border-color: hsl(var(--color-amber-500)); }
+.border-cyan { border-color: hsl(var(--color-cyan-500)); }
+
+/* Status Colors */
+.bg-success { background-color: hsl(var(--color-success)); }
+.bg-success-light { background-color: hsl(var(--color-success-light)); }
+.bg-warning { background-color: hsl(var(--color-warning)); }
+.bg-warning-light { background-color: hsl(var(--color-warning-light)); }
+.bg-error { background-color: hsl(var(--color-error)); }
+.bg-error-light { background-color: hsl(var(--color-error-light)); }
+.bg-info { background-color: hsl(var(--color-info)); }
+.bg-info-light { background-color: hsl(var(--color-info-light)); }
+
+.text-success { color: hsl(var(--color-success)); }
+.text-warning { color: hsl(var(--color-warning)); }
+.text-error { color: hsl(var(--color-error)); }
+.text-info { color: hsl(var(--color-info)); }
+
+
