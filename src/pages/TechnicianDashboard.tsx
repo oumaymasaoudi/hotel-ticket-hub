@@ -38,22 +38,35 @@ const TechnicianDashboard = () => {
     const [filter, setFilter] = useState("");
     const [updating, setUpdating] = useState<string | null>(null);
 
-    // ✅ Détecter la route active pour afficher le bon contenu
+    // Detect active route to display correct content
     const currentView = useMemo(() => {
         const path = location.pathname;
         if (path.includes('/tickets')) return 'tickets';
         if (path.includes('/urgent')) return 'urgent';
         if (path.includes('/history')) return 'history';
-        return 'dashboard'; // Par défaut, afficher le tableau de bord
+        return 'dashboard'; // Default: show dashboard
     }, [location.pathname]);
 
     const fetchTickets = useCallback(async (technicianId: string) => {
+        if (!technicianId) {
+            console.error("TechnicianDashboard: technicianId is missing");
+            toast({
+                title: "Erreur",
+                description: "ID technicien manquant",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setLoading(true);
         try {
+            console.log("TechnicianDashboard: Fetching tickets for technician:", technicianId);
             const data = await apiService.getTicketsByTechnician(technicianId);
-            setTickets(data);
-        } catch (error: any) {
-            const errorMessage = error.message || "Impossible de récupérer vos tickets";
+            console.log("TechnicianDashboard: Received tickets:", data?.length || 0);
+            setTickets(data || []);
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer vos tickets";
+            console.error("TechnicianDashboard: Error fetching tickets:", error);
 
             toast({
                 title: "Erreur",
@@ -61,8 +74,8 @@ const TechnicianDashboard = () => {
                 variant: "destructive",
             });
 
-            // Rediriger vers login si session expirée
-            if (errorMessage.includes("Session expirée")) {
+            // Redirect to login if session expired
+            if (errorMessage.includes("Session expirée") || errorMessage.includes("401") || errorMessage.includes("403")) {
                 setTimeout(() => navigate("/login"), 2000);
             }
         } finally {
@@ -73,7 +86,7 @@ const TechnicianDashboard = () => {
     useEffect(() => {
         if (!authLoading) {
             if (!user?.userId) {
-                // Pas connecté, rediriger vers login
+                // Not connected, redirect to login
                 navigate("/login");
             } else {
                 fetchTickets(user.userId);
@@ -85,16 +98,16 @@ const TechnicianDashboard = () => {
     const filteredTickets = useMemo(() => {
         let filtered = tickets;
 
-        // ✅ Filtrer selon la vue active
+        // Filter by active view
         if (currentView === 'urgent') {
             filtered = filtered.filter(t => t.isUrgent);
         } else if (currentView === 'history') {
             filtered = filtered.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
         } else if (currentView === 'tickets') {
-            // Afficher tous les tickets assignés (pas de filtre supplémentaire)
+            // Show all assigned tickets (no additional filter)
         }
 
-        // ✅ Appliquer le filtre de recherche
+        // Apply search filter
         if (filter.trim()) {
             const f = filter.toLowerCase();
             filtered = filtered.filter(
@@ -132,10 +145,11 @@ const TechnicianDashboard = () => {
                 prev.map((t) => (t.id === ticket.id ? { ...t, status: nextStatus } : t))
             );
             toast({ title: "Statut mis à jour", description: `${statusLabels[nextStatus]}` });
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Erreur lors de la mise à jour du statut";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de mettre à jour le statut",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -143,7 +157,7 @@ const TechnicianDashboard = () => {
         }
     };
 
-    // ✅ Titre et description selon la vue
+    // Title and description based on view
     const getViewTitle = () => {
         switch (currentView) {
             case 'tickets':

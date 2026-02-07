@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { apiService } from '@/services/apiService';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,17 +18,17 @@ export function useNotifications(pollInterval: number = 30000) {
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isPolling, setIsPolling] = useState(false);
+  const isPollingRef = useRef(false);
 
   const checkForUpdates = useCallback(async () => {
-    if (!user || !hotelId || isPolling) return;
+    if (!user || !hotelId || isPollingRef.current) return;
 
-    setIsPolling(true);
+    isPollingRef.current = true;
     try {
-      // Vérifier les nouveaux tickets
+      // Check for new tickets
       const tickets = await apiService.getTicketsByHotel(hotelId);
 
-      // Vérifier les tickets urgents non assignés
+      // Check for urgent unassigned tickets
       const urgentUnassigned = tickets.filter(
         t => t.isUrgent && !t.assignedTechnicianId && t.status === 'OPEN'
       );
@@ -63,22 +63,42 @@ export function useNotifications(pollInterval: number = 30000) {
         });
       }
     } catch (error) {
-      // Error checking notifications
+      // Error checking notifications - avoid infinite loops on error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Don't log repeated connection errors to avoid spam
+      if (!errorMessage.includes('Failed to fetch') && !errorMessage.includes('ERR_CONNECTION_REFUSED')) {
+        console.error('Error checking notifications:', error);
+      }
+      
+      // If backend unavailable, stop polling temporarily
+      if (errorMessage.includes('ERR_CONNECTION_REFUSED') || errorMessage.includes('Failed to fetch')) {
+        // Le polling reprendra au prochain interval
+        isPollingRef.current = false;
+        return;
+      }
     } finally {
-      setIsPolling(false);
+      isPollingRef.current = false;
     }
-  }, [user, hotelId, isPolling, toast]);
+  }, [user, hotelId, toast]);
 
   useEffect(() => {
     if (!user || !hotelId) return;
 
-    // Vérification immédiate
-    checkForUpdates();
+    // Immediate check with small delay to avoid multiple calls
+    const timeoutId = setTimeout(() => {
+      checkForUpdates();
+    }, 1000);
 
-    // Polling périodique
-    const interval = setInterval(checkForUpdates, pollInterval);
+    // Periodic polling
+    const interval = setInterval(() => {
+      checkForUpdates();
+    }, pollInterval);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(interval);
+    };
   }, [user, hotelId, checkForUpdates, pollInterval]);
 
   useEffect(() => {

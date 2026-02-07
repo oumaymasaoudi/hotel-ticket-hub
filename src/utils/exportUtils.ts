@@ -1,10 +1,38 @@
 import jsPDF from 'jspdf';
 import { TicketResponse } from '@/services/apiService';
 
+interface ReportCategory {
+  categoryName?: string;
+  name?: string;
+  count?: number;
+}
+
+interface ReportTechnician {
+  technicianName?: string;
+  name?: string;
+  assignedTickets?: number;
+  resolvedTickets?: number;
+}
+
+interface MonthlyReportData {
+  month?: string | number;
+  year?: string | number;
+  totalTickets?: number;
+  openTickets?: number;
+  resolvedTickets?: number;
+  escalatedTickets?: number;
+  byCategory?: ReportCategory[];
+  byTechnician?: ReportTechnician[];
+}
+
+interface PerformanceReportData {
+  byTechnician?: ReportTechnician[];
+}
+
 /**
  * Exporte des données en CSV
  */
-export function exportToCSV(data: any[], filename: string = 'export.csv') {
+export function exportToCSV<T extends Record<string, unknown>>(data: T[], filename: string = 'export.csv') {
     if (!data || data.length === 0) {
         throw new Error('Aucune donnée à exporter');
     }
@@ -300,7 +328,7 @@ export function exportTicketToPDF(ticket: TicketResponse) {
 /**
  * Génère un rapport mensuel en PDF pour un hôtel
  */
-export function generateMonthlyReportPDF(reportData: any, hotelName: string) {
+export function generateMonthlyReportPDF(reportData: MonthlyReportData, hotelName: string) {
     const sections = [
         {
             title: 'Statistiques Générales',
@@ -320,7 +348,7 @@ export function generateMonthlyReportPDF(reportData: any, hotelName: string) {
     if (reportData.byCategory && Array.isArray(reportData.byCategory)) {
         tables.push({
             headers: ['Catégorie', 'Nombre de Tickets'],
-            rows: reportData.byCategory.map((cat: any) => [
+            rows: reportData.byCategory.map((cat: ReportCategory) => [
                 cat.categoryName || cat.name || 'N/A',
                 cat.count || 0
             ])
@@ -331,7 +359,7 @@ export function generateMonthlyReportPDF(reportData: any, hotelName: string) {
     if (reportData.byTechnician && Array.isArray(reportData.byTechnician)) {
         tables.push({
             headers: ['Technicien', 'Tickets Assignés', 'Tickets Résolus'],
-            rows: reportData.byTechnician.map((tech: any) => [
+            rows: reportData.byTechnician.map((tech: ReportTechnician) => [
                 tech.technicianName || tech.name || 'N/A',
                 tech.assignedTickets || 0,
                 tech.resolvedTickets || 0
@@ -349,12 +377,12 @@ export function generateMonthlyReportPDF(reportData: any, hotelName: string) {
 /**
  * Génère un rapport de performance en CSV
  */
-export function generatePerformanceReportCSV(reportData: any, filename: string = 'rapport-performance.csv') {
-    const data: any[] = [];
+export function generatePerformanceReportCSV(reportData: PerformanceReportData, filename: string = 'rapport-performance.csv') {
+    const data: Array<Record<string, string | number>> = [];
 
     // Ajouter les statistiques générales
     if (reportData.byTechnician && Array.isArray(reportData.byTechnician)) {
-        reportData.byTechnician.forEach((tech: any) => {
+        reportData.byTechnician.forEach((tech: ReportTechnician) => {
             data.push({
                 'Technicien': tech.technicianName || tech.name || 'N/A',
                 'Tickets Assignés': tech.assignedTickets || 0,

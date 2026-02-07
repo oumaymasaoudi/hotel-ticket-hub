@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, FileSpreadsheet, Download, Loader2, Building2, BarChart3, Clock } from 'lucide-react';
+import { FileSpreadsheet, Download, Loader2, Building2, BarChart3, Clock } from 'lucide-react';
 import { useReports } from '@/hooks/useReports';
 
 const SuperAdminReportsView = () => {

@@ -4,23 +4,20 @@ import {
     Pagination,
     PaginationContent,
     PaginationItem,
-    PaginationLink,
-    PaginationNext,
-    PaginationPrevious,
     PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaginationControlsProps {
-    currentPage: number;
-    totalPages: number;
-    itemsPerPage: number;
-    totalItems: number;
-    startIndex: number;
-    endIndex: number;
-    onPageChange: (page: number) => void;
-    onItemsPerPageChange: (size: number) => void;
-    itemsPerPageOptions?: number[];
+    readonly currentPage: number;
+    readonly totalPages: number;
+    readonly itemsPerPage: number;
+    readonly totalItems: number;
+    readonly startIndex: number;
+    readonly endIndex: number;
+    readonly onPageChange: (page: number) => void;
+    readonly onItemsPerPageChange: (size: number) => void;
+    readonly itemsPerPageOptions?: number[];
 }
 
 export function PaginationControls({

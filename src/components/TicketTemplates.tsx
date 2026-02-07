@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Edit } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,8 +53,8 @@ const DEFAULT_TEMPLATES: TicketTemplate[] = [
 ];
 
 interface TicketTemplatesProps {
-  onSelectTemplate: (template: TicketTemplate) => void;
-  categories?: Array<{ id: string; name: string }>;
+  readonly onSelectTemplate: (template: TicketTemplate) => void;
+  readonly categories?: Array<{ id: string; name: string }>;
 }
 
 export function TicketTemplates({ onSelectTemplate, categories = [] }: TicketTemplatesProps) {
@@ -88,19 +88,19 @@ export function TicketTemplates({ onSelectTemplate, categories = [] }: TicketTem
     }
 
     const selectedCategory = categories.find(c => c.id === formData.categoryId);
-    
+
     if (editingTemplate) {
       setTemplates(prev =>
         prev.map(t =>
           t.id === editingTemplate.id
             ? {
-                ...t,
-                name: formData.name,
-                categoryId: formData.categoryId,
-                categoryName: selectedCategory?.name || "",
-                description: formData.description,
-                isUrgent: formData.isUrgent,
-              }
+              ...t,
+              name: formData.name,
+              categoryId: formData.categoryId,
+              categoryName: selectedCategory?.name || "",
+              description: formData.description,
+              isUrgent: formData.isUrgent,
+            }
             : t
         )
       );

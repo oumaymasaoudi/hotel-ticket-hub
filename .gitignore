@@ -60,3 +60,11 @@ Thumbs.db
 
 # Build outputs
 build/
+
+# SSH Keys (NEVER commit private keys!)
+*.pem
+*.key
+!*.pub
+github-actions-key
+*private*
+*secret*

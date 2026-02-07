@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel } from "@/services/apiService";
+// Force rebuild: Hotel type import fix - Changed at 2026-01-02 14:20
+import { apiService, TicketResponse, type Hotel, Plan, Technician, Subscription } from "@/services/apiService";
 import { TicketDetailDialog } from "@/components/tickets/TicketDetailDialog";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationControls } from "@/components/PaginationControls";
@@ -19,12 +20,8 @@ import {
     AlertTriangle,
     CheckCircle,
     Clock,
-    Wrench,
-    TrendingUp,
     Users,
-    DollarSign,
     FileText,
-    Settings,
     Eye,
     UserPlus,
     ArrowUp,
@@ -34,11 +31,9 @@ import {
     CreditCard,
     Star,
     Crown,
-    Zap,
-    ChevronDown
+    Zap
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PieChart, Pie, Cell, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -70,13 +65,13 @@ const AdminDashboard = () => {
     const location = useLocation();
     const [tickets, setTickets] = useState<TicketResponse[]>([]);
     const [hotel, setHotel] = useState<Hotel | null>(null);
-    const [technicians, setTechnicians] = useState<any[]>([]);
-    const [plans, setPlans] = useState<any[]>([]);
-    const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+    const [technicians, setTechnicians] = useState<Technician[]>([]);
+    const [plans, setPlans] = useState<Plan[]>([]);
+    const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadingTechnicians, setLoadingTechnicians] = useState(false);
     const [loadingSubscription, setLoadingSubscription] = useState(false);
-    const [filter, setFilter] = useState("");
+    const [filter] = useState("");
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState<TicketResponse | null>(null);
     const [assigning, setAssigning] = useState(false);
@@ -92,7 +87,7 @@ const AdminDashboard = () => {
     });
     const [editTechnicianDialogOpen, setEditTechnicianDialogOpen] = useState(false);
     const [editingTechnician, setEditingTechnician] = useState(false);
-    const [selectedTechnicianForEdit, setSelectedTechnicianForEdit] = useState<any>(null);
+    const [selectedTechnicianForEdit, setSelectedTechnicianForEdit] = useState<Technician | null>(null);
     const [editTechnicianForm, setEditTechnicianForm] = useState({
         email: "",
         fullName: "",
@@ -102,15 +97,15 @@ const AdminDashboard = () => {
     });
     const [deletingTechnician, setDeletingTechnician] = useState(false);
 
-    // ✅ Détecter la route active pour afficher le bon contenu
+    // Detect active route to display correct content
     const currentView = useMemo(() => {
         const path = location.pathname;
         if (path.includes('/tickets')) return 'tickets';
         if (path.includes('/technicians')) return 'technicians';
         if (path.includes('/escalations')) return 'escalations';
-        if (path.includes('/payment')) return 'payments'; // Note: menu utilise "payment" mais on garde "payments" pour la cohérence
+        if (path.includes('/payment')) return 'payments'; // Note: menu uses "payment" but keep "payments" for consistency
         if (path.includes('/reports')) return 'reports';
-        return 'dashboard'; // Par défaut, afficher le tableau de bord
+        return 'dashboard'; // Default: show dashboard
     }, [location.pathname]);
 
     const fetchTickets = useCallback(async (hotelIdParam: string) => {
@@ -118,13 +113,13 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getTicketsByHotel(hotelIdParam);
             setTickets(data || []); // S'assurer que tickets est toujours un tableau
-        } catch (error: any) {
-            const errorMessage = error.message || "Impossible de récupérer les tickets";
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Impossible de récupérer les tickets";
 
             // Initialize with empty array so dashboard still displays
             setTickets([]);
 
-            // Si c'est une erreur 402 (Payment Required), afficher un message spécifique
+            // If 402 error (Payment Required), show specific message
             if (errorMessage.includes("402") || errorMessage.includes("Payment Required") || errorMessage.includes("Paiement")) {
                 toast({
                     title: "Paiement en retard",
@@ -152,7 +147,7 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getHotelById(hotelIdParam);
             setHotel(data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Silent error - hotel is not required to display dashboard
             // This can happen if payment is overdue (402) or other error
             setHotel(null); // Ensure hotel is null on error
@@ -173,11 +168,11 @@ const AdminDashboard = () => {
             } else {
                 setTechnicians([]);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             setTechnicians([]);
 
-            // Message d'erreur plus spécifique
-            const errorMessage = error.message || "Impossible de charger les techniciens";
+            // More specific error message
+            const errorMessage = error instanceof Error ? error.message : "Impossible de charger les techniciens";
             const isConnectionError = errorMessage.includes('backend n\'est pas accessible') ||
                 errorMessage.includes('ERR_CONNECTION_REFUSED') ||
                 errorMessage.includes('Failed to fetch');
@@ -198,7 +193,7 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getAllPlans();
             setPlans(data || []);
-        } catch (error: any) {
+        } catch (error: unknown) {
             setPlans([]);
         }
     }, []);
@@ -210,14 +205,14 @@ const AdminDashboard = () => {
         try {
             const data = await apiService.getHotelSubscription(hotelIdParam);
             setCurrentSubscription(data.exists === false ? null : data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             setCurrentSubscription(null);
         } finally {
             setLoadingSubscription(false);
         }
     }, []);
 
-    // Fonction pour assigner un technicien à un ticket
+    // Function to assign technician to ticket
     const handleAssignTechnician = useCallback(async (ticketId: string, technicianId: string) => {
         if (!user?.userId) return;
 
@@ -234,10 +229,10 @@ const AdminDashboard = () => {
             }
             setAssignDialogOpen(false);
             setSelectedTicket(null);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: "Erreur",
-                description: error.message || "Erreur lors de l'assignation du technicien",
+                description: error instanceof Error ? error.message : "Erreur lors de l'assignation du technicien",
                 variant: "destructive",
             });
         } finally {
@@ -251,57 +246,35 @@ const AdminDashboard = () => {
 
         let filtered = technicians;
 
-        // Filtrage par catégorie du ticket (si un ticket est sélectionné)
-        if (selectedTicket) {
-            const ticketCategory = selectedTicket.categoryName?.toLowerCase() || '';
+        // Filter by ticket category (if ticket selected)
+        // Technician specialties now contain category names
+        if (selectedTicket?.categoryName) {
+            const ticketCategoryName = selectedTicket.categoryName.trim();
 
-            // Mapping des catégories vers les spécialités potentielles
-            const categoryToSpecialtyMap: Record<string, string[]> = {
-                'plomberie': ['plomberie', 'plombier', 'eau', 'sanitaire'],
-                'électricité': ['électricité', 'électricien', 'électrique'],
-                'climatisation': ['climatisation', 'chauffage', 'ventilation'],
-                'wifi/internet': ['wifi', 'internet', 'réseau', 'informatique'],
-                'serrurerie': ['serrurerie', 'serrurier', 'sécurité'],
-                'mobilier': ['mobilier', 'menuiserie', 'réparation'],
-                'sanitaires': ['sanitaire', 'plomberie', 'hygiène'],
-                'insonorisation': ['insonorisation', 'acoustique'],
-                'nettoyage': ['nettoyage', 'ménage'],
-                'sécurité': ['sécurité', 'serrurerie'],
-                'restauration': ['restauration', 'cuisine'],
-                'approvisionnement': ['approvisionnement', 'logistique'],
-            };
+            // Filter technicians who have this category in specialties
+            filtered = filtered.filter((tech: Technician) => {
+                // If technician has no specialties, exclude (must have categories)
+                if (!tech.specialties || tech.specialties.length === 0) {
+                    return false;
+                }
 
-            // Trouver les spécialités correspondantes
-            const matchingSpecialties = categoryToSpecialtyMap[ticketCategory] || [];
-
-            // Filtrer les techniciens qui ont une spécialité correspondante
-            if (matchingSpecialties.length > 0) {
-                filtered = filtered.filter((tech: any) => {
-                    // Si le technicien n'a pas de spécialités, l'inclure quand même
-                    if (!tech.specialties || tech.specialties.length === 0) {
-                        return true;
-                    }
-
-                    // Vérifier si au moins une spécialité du technicien correspond
-                    return tech.specialties.some((specialty: string) =>
-                        matchingSpecialties.some(match =>
-                            specialty.toLowerCase().includes(match.toLowerCase()) ||
-                            match.toLowerCase().includes(specialty.toLowerCase())
-                        )
-                    );
-                });
-            }
+                // Check if technician has exactly this category in specialties
+                // Specialties store category names
+                return tech.specialties.some((specialty: string) =>
+                    specialty.trim().toLowerCase() === ticketCategoryName.toLowerCase()
+                );
+            });
         }
 
-        // Filtrage par recherche de spécialité
+        // Filter by specialty search
         if (specialtySearch.trim()) {
             const searchLower = specialtySearch.toLowerCase().trim();
-            filtered = filtered.filter((tech: any) => {
+            filtered = filtered.filter((tech: Technician) => {
                 // Rechercher dans le nom
                 const nameMatch = tech.fullName?.toLowerCase().includes(searchLower) ||
                     tech.email?.toLowerCase().includes(searchLower);
 
-                // Rechercher dans les spécialités
+                // Search in specialties
                 const specialtyMatch = tech.specialties?.some((specialty: string) =>
                     specialty.toLowerCase().includes(searchLower)
                 ) || false;
@@ -315,16 +288,17 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         if (!authLoading && user?.userId && hotelId) {
-            // Charger les tickets en priorité (nécessaire pour le dashboard)
+            // Load tickets first (required for dashboard)
             fetchTickets(hotelId);
-            // Charger l'hôtel en arrière-plan (optionnel, ne bloque pas l'affichage)
+            // Load hotel in background (optional, doesn't block display)
             fetchHotel(hotelId);
             // Charger les techniciens pour le dashboard
             fetchTechnicians(hotelId);
         }
-    }, [authLoading, user?.userId, hotelId, fetchTickets, fetchHotel, fetchTechnicians]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authLoading, user?.userId, hotelId]);
 
-    // Charger les données spécifiques selon la vue active
+    // Load specific data based on active view
     useEffect(() => {
         if (authLoading || !hotelId) return;
 
@@ -361,7 +335,7 @@ const AdminDashboard = () => {
         return { total, open, inProgress, resolved, escalated, urgent };
     }, [tickets]);
 
-    // Données pour le graphique en donut (tickets par statut)
+    // Data for donut chart (tickets by status)
     const statusChartData = useMemo(() => {
         const statusCounts = {
             'OPEN': tickets.filter(t => t.status === 'OPEN').length,
@@ -380,7 +354,7 @@ const AdminDashboard = () => {
         ].filter(item => item.value > 0);
     }, [tickets]);
 
-    // Données pour le graphique d'évolution sur 7 jours
+    // Data for 7-day trend chart
     const evolutionData = useMemo(() => {
         const days = ['Samedi', 'Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
         const today = new Date();
@@ -406,7 +380,7 @@ const AdminDashboard = () => {
         return data;
     }, [tickets]);
 
-    // Données pour le graphique de performance des techniciens
+    // Data for technician performance chart
     const technicianPerformanceData = useMemo(() => {
         const techMap = new Map<string, { assigned: number; resolved: number }>();
 
@@ -431,7 +405,7 @@ const AdminDashboard = () => {
         }));
     }, [tickets]);
 
-    // Tickets récents (5 derniers)
+    // Recent tickets (last 5)
     const recentTickets = useMemo(() => {
         return [...tickets]
             .sort((a, b) => {
@@ -625,7 +599,7 @@ const AdminDashboard = () => {
                             <div className="text-center py-8 text-muted-foreground">Chargement...</div>
                         ) : technicians.length > 0 ? (
                             <div className="space-y-3">
-                                {technicians.slice(0, 5).map((tech: any) => (
+                                {technicians.slice(0, 5).map((tech: Technician) => (
                                     <div key={tech.id} className="flex items-center gap-3 p-2 border rounded-lg">
                                         <Users className="h-5 w-5 text-muted-foreground" />
                                         <div className="flex-1">
@@ -716,7 +690,7 @@ const AdminDashboard = () => {
         </div>
     );
 
-    // Vue Tickets avec table formatée
+    // Tickets view with formatted table
     const TicketsView = () => {
         const [advancedFilters, setAdvancedFilters] = useState<FilterState>({
             search: "",
@@ -729,10 +703,10 @@ const AdminDashboard = () => {
         });
         const showUrgent = new URLSearchParams(location.search).get('urgent') === 'true';
 
-        // Préparer les catégories pour les filtres
+        // Prepare categories for filters
         const categoriesForFilters = useMemo(() => {
             const uniqueCategories = new Map();
-            tickets.forEach(ticket => {
+            filteredTickets.forEach(ticket => {
                 if (ticket.categoryId && ticket.categoryName) {
                     uniqueCategories.set(ticket.categoryId, {
                         id: ticket.categoryId,
@@ -742,6 +716,7 @@ const AdminDashboard = () => {
                 }
             });
             return Array.from(uniqueCategories.values());
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [filteredTickets]);
 
         const displayTickets = useMemo(() => {
@@ -752,7 +727,7 @@ const AdminDashboard = () => {
                 filtered = filtered.filter(t => t.isUrgent);
             }
 
-            // Filtres avancés
+            // Advanced filters
             if (advancedFilters.search) {
                 const search = advancedFilters.search.toLowerCase();
                 filtered = filtered.filter(t =>
@@ -980,8 +955,8 @@ const AdminDashboard = () => {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        technicians.map((tech: any, index: number) => {
-                                            // Utiliser un identifiant unique pour la clé
+                                        technicians.map((tech: Technician, index: number) => {
+                                            // Use unique identifier for key
                                             const techKey = tech.id || tech.userId || `tech-${index}`;
                                             return (
                                                 <TableRow key={techKey}>
@@ -1046,10 +1021,10 @@ const AdminDashboard = () => {
                                                                             if (hotelId) {
                                                                                 await fetchTechnicians(hotelId);
                                                                             }
-                                                                        } catch (error: any) {
+                                                                        } catch (error: unknown) {
                                                                             toast({
                                                                                 title: "Erreur",
-                                                                                description: error.message || "Erreur lors de la suppression du technicien",
+                                                                                description: error instanceof Error ? error.message : "Erreur lors de la suppression du technicien",
                                                                                 variant: "destructive",
                                                                             });
                                                                         } finally {
@@ -1085,7 +1060,8 @@ const AdminDashboard = () => {
                 t.status === 'IN_PROGRESS' ||
                 (t.slaDeadline && new Date(t.slaDeadline) < new Date())
             );
-        }, [tickets]);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [filteredTickets]);
 
         const escalatedCount = tickets.filter(t => t.isUrgent).length;
         const slaExceededCount = tickets.filter(t =>
@@ -1201,7 +1177,7 @@ const AdminDashboard = () => {
     const PaymentsView = () => {
         const [searchParams] = useSearchParams();
 
-        // Vérifier si l'utilisateur revient de Stripe
+        // Check if user returns from Stripe
         useEffect(() => {
             const success = searchParams.get('success');
             const canceled = searchParams.get('canceled');
@@ -1227,7 +1203,8 @@ const AdminDashboard = () => {
                 // Nettoyer l'URL
                 window.history.replaceState({}, '', '/dashboard/admin/payment');
             }
-        }, [searchParams, hotelId, fetchSubscription, toast]);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [searchParams, fetchSubscription]);
 
         const defaultPlans = [
             { id: '1', name: 'Starter', price: 99, icon: Zap, features: ['50 tickets par mois', '2 techniciens maximum', 'SLA 48 heures', 'Support email'] },
@@ -1239,7 +1216,7 @@ const AdminDashboard = () => {
             id: p.id,
             name: p.name,
             price: p.baseCost,
-            icon: p.name === 'BASIC' || p.name === 'Starter' ? Zap : p.name === 'PRO' || p.name === 'Pro' ? Star : Crown,
+            icon: p.name === 'STARTER' || p.name === 'Starter' ? Zap : p.name === 'PRO' || p.name === 'Pro' ? Star : Crown,
             features: [
                 `${p.ticketQuota} tickets par mois`,
                 p.maxTechnicians === 999 ? 'Techniciens illimités' : `${p.maxTechnicians} techniciens maximum`,
@@ -1354,7 +1331,7 @@ const AdminDashboard = () => {
                                             disabled={isCurrent || loadingSubscription}
                                             onClick={async () => {
                                                 if (!isCurrent && hotelId) {
-                                                    // Vérifier que le plan a un ID valide (UUID)
+                                                    // Verify plan has valid ID (UUID)
                                                     if (!plan.id || plan.id.length < 30) {
                                                         toast({
                                                             title: "Erreur",
@@ -1369,10 +1346,10 @@ const AdminDashboard = () => {
                                                         const session = await apiService.createStripeCheckoutSession(hotelId, plan.id);
                                                         // Rediriger vers Stripe Checkout
                                                         window.location.href = session.url;
-                                                    } catch (error: any) {
-                                                        const errorMessage = error.message || "Impossible de créer la session de paiement";
+                                                    } catch (error: unknown) {
+                                                        const errorMessage = error instanceof Error ? error.message : "Impossible de créer la session de paiement";
 
-                                                        // Vérifier si c'est une erreur de connexion
+                                                        // Check if connection error
                                                         if (errorMessage.includes("Failed to fetch") || errorMessage.includes("ERR_CONNECTION_REFUSED") || errorMessage.includes("NetworkError")) {
                                                             toast({
                                                                 title: "Backend non disponible",
@@ -1415,7 +1392,7 @@ const AdminDashboard = () => {
         );
     };
 
-    // Vue Rapports avec cartes de téléchargement
+    // Reports view with download cards
     const ReportsView = () => {
         const [loadingReport, setLoadingReport] = useState(false);
 
@@ -1442,10 +1419,10 @@ const AdminDashboard = () => {
                     title: "Succès",
                     description: "Rapport PDF téléchargé avec succès",
                 });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 toast({
                     title: "Erreur",
-                    description: error.message || "Impossible de générer le rapport PDF",
+                    description: error instanceof Error ? error.message : "Impossible de générer le rapport PDF",
                     variant: "destructive",
                 });
             } finally {
@@ -1476,10 +1453,10 @@ const AdminDashboard = () => {
                     title: "Succès",
                     description: "Rapport CSV téléchargé avec succès",
                 });
-            } catch (error: any) {
+            } catch (error: unknown) {
                 toast({
                     title: "Erreur",
-                    description: error.message || "Impossible de générer le rapport CSV",
+                    description: error instanceof Error ? error.message : "Impossible de générer le rapport CSV",
                     variant: "destructive",
                 });
             } finally {
@@ -1694,7 +1671,7 @@ const AdminDashboard = () => {
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {filteredTechnicians.map((tech: any) => (
+                                {filteredTechnicians.map((tech: Technician) => (
                                     <div
                                         key={tech.id}
                                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
@@ -1863,7 +1840,7 @@ const AdminDashboard = () => {
                                         description: "Le technicien a été créé avec succès",
                                     });
 
-                                    // Réinitialiser le formulaire
+                                    // Reset form
                                     setNewTechnician({ email: "", password: "", fullName: "", phone: "" });
                                     setAddTechnicianDialogOpen(false);
 
@@ -1871,10 +1848,10 @@ const AdminDashboard = () => {
                                     if (hotelId) {
                                         await fetchTechnicians(hotelId);
                                     }
-                                } catch (error: any) {
+                                } catch (error: unknown) {
                                     toast({
                                         title: "Erreur",
-                                        description: error.message || "Erreur lors de la création du technicien",
+                                        description: error instanceof Error ? error.message : "Erreur lors de la création du technicien",
                                         variant: "destructive",
                                     });
                                 } finally {
@@ -2001,7 +1978,13 @@ const AdminDashboard = () => {
 
                                 setEditingTechnician(true);
                                 try {
-                                    const updateData: any = {
+                                    const updateData: {
+                                        email: string;
+                                        fullName: string;
+                                        phone?: string;
+                                        isActive: boolean;
+                                        password?: string;
+                                    } = {
                                         email: editTechnicianForm.email,
                                         fullName: editTechnicianForm.fullName,
                                         phone: editTechnicianForm.phone || undefined,
@@ -2020,7 +2003,7 @@ const AdminDashboard = () => {
                                         description: "Le technicien a été modifié avec succès",
                                     });
 
-                                    // Réinitialiser le formulaire
+                                    // Reset form
                                     setEditTechnicianForm({ email: "", fullName: "", phone: "", password: "", isActive: true });
                                     setEditTechnicianDialogOpen(false);
                                     setSelectedTechnicianForEdit(null);
@@ -2029,10 +2012,10 @@ const AdminDashboard = () => {
                                     if (hotelId) {
                                         await fetchTechnicians(hotelId);
                                     }
-                                } catch (error: any) {
+                                } catch (error: unknown) {
                                     toast({
                                         title: "Erreur",
-                                        description: error.message || "Erreur lors de la modification du technicien",
+                                        description: error instanceof Error ? error.message : "Erreur lors de la modification du technicien",
                                         variant: "destructive",
                                     });
                                 } finally {

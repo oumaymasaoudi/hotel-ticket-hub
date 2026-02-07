@@ -24,7 +24,6 @@ export const TicketImageUpload = ({
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [images, setImages] = useState(existingImages);
-  const [uploadingFiles, setUploadingFiles] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     setImages(existingImages);
@@ -69,7 +68,7 @@ export const TicketImageUpload = ({
     setUploading(true);
     try {
       const response = await apiService.addImagesToTicket(ticketId, files);
-      
+
       // Mettre à jour les images existantes
       if (response.images) {
         setImages(response.images);
@@ -84,10 +83,11 @@ export const TicketImageUpload = ({
       if (onImagesChange) {
         onImagesChange([]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Impossible d'ajouter les photos";
       toast({
         title: "Erreur",
-        description: error.message || "Impossible d'ajouter les photos",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -138,7 +138,7 @@ export const TicketImageUpload = ({
           // Extraire le nom de fichier du chemin de stockage
           const fileName = image.storage_path.split(/[/\\]/).pop() || image.file_name;
           const imageUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'}/tickets/images/${fileName}`;
-          
+
           return (
             <div key={image.id || index} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
               <img
@@ -151,17 +151,31 @@ export const TicketImageUpload = ({
                   (e.target as HTMLImageElement).src = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#ddd"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#999">Image</text></svg>')}`;
                 }}
               />
-              {!readOnly && (
+              {!readOnly && ticketId && (
                 <button
                   type="button"
-                  onClick={() => {
-                    // TODO: Implémenter la suppression d'image
-                    toast({
-                      title: "Info",
-                      description: "La suppression d'images sera disponible prochainement",
-                    });
+                  onClick={async () => {
+                    if (!ticketId || !image.id) return;
+                    
+                    try {
+                      await apiService.deleteTicketImage(ticketId, image.id);
+                      // Remove from local state
+                      setImages(images.filter(img => img.id !== image.id));
+                      toast({
+                        title: "Succès",
+                        description: "Image supprimée avec succès",
+                      });
+                    } catch (error: unknown) {
+                      const errorMessage = error instanceof Error ? error.message : "Impossible de supprimer l'image";
+                      toast({
+                        title: "Erreur",
+                        description: errorMessage,
+                        variant: "destructive",
+                      });
+                    }
                   }}
-                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/90"
+                  aria-label="Supprimer l'image"
                 >
                   <X className="h-3 w-3" />
                 </button>

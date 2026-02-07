@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiService, TicketResponse, Hotel, Category, Plan } from "@/services/apiService";
+// Force rebuild: Hotel type import fix - Changed at 2026-01-02 14:20
+import { apiService, TicketResponse, type Hotel, Category, Plan, User, Payment, AuditLog } from "@/services/apiService";
 import { Building2, Users, TicketCheck, DollarSign, AlertTriangle, RefreshCw, TrendingUp, Layers, FileText, History, Settings, Wrench, Edit, Trash2, Plus, Search, Clock, ArrowUp, CheckCircle, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -21,16 +22,16 @@ const SuperAdminDashboard = () => {
     const location = useLocation();
     const [tickets, setTickets] = useState<TicketResponse[]>([]);
     const [hotels, setHotels] = useState<Hotel[]>([]);
-    const [users, setUsers] = useState<any[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
-    const [overduePayments, setOverduePayments] = useState<any[]>([]);
-    const [allPayments, setAllPayments] = useState<any[]>([]);
+    const [overduePayments, setOverduePayments] = useState<Payment[]>([]);
+    const [allPayments, setAllPayments] = useState<Payment[]>([]);
     const [plans, setPlans] = useState<Plan[]>([]);
-    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchFilter, setSearchFilter] = useState("");
 
-    // ✅ Détecter la route active pour afficher le bon contenu
+    // Detect active route to display correct content
     const currentView = useMemo(() => {
         const path = location.pathname;
         if (path.includes('/hotels')) return 'hotels';
@@ -42,7 +43,7 @@ const SuperAdminDashboard = () => {
         if (path.includes('/reports')) return 'reports';
         if (path.includes('/logs')) return 'logs';
         if (path.includes('/settings')) return 'settings';
-        return 'dashboard'; // Par défaut, afficher le tableau de bord
+        return 'dashboard'; // Default: show dashboard
     }, [location.pathname]);
 
     const fetchData = useCallback(async () => {
@@ -50,16 +51,16 @@ const SuperAdminDashboard = () => {
 
         setLoading(true);
         try {
-            // Récupérer toutes les données en parallèle
+            // Fetch all data in parallel
             const [ticketsData, hotelsData, usersData, categoriesData, overduePaymentsData, allPaymentsData, plansData, logsData] = await Promise.all([
                 apiService.getAllTickets(),
                 apiService.getAllHotels(),
                 apiService.getAllUsers(),
-                apiService.getCategories().catch(() => []), // Utiliser getCategories pour l'instant
-                apiService.getOverduePayments().catch(() => []), // Ignorer l'erreur si l'endpoint n'existe pas
-                apiService.getAllPayments().catch(() => []), // Récupérer tous les paiements
-                apiService.getAllPlans().catch(() => []), // Récupérer les plans
-                apiService.getAllAuditLogs().catch(() => []), // Récupérer les logs d'audit
+                apiService.getCategories().catch(() => []), // Use getCategories for now
+                apiService.getOverduePayments().catch(() => []), // Ignore error if endpoint doesn't exist
+                apiService.getAllPayments().catch(() => []), // Get all payments
+                apiService.getAllPlans().catch(() => []), // Get plans
+                apiService.getAllAuditLogs().catch(() => []), // Get audit logs
             ]);
 
             setTickets(ticketsData);
@@ -96,7 +97,7 @@ const SuperAdminDashboard = () => {
         const resolvedTickets = tickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED').length;
         const urgentTickets = tickets.filter(t => t.isUrgent).length;
         const totalHotels = hotels.length;
-        const activeHotels = hotels.filter(h => h).length; // Ajuster selon votre modèle
+        const activeHotels = hotels.filter(h => h).length; // Adjust according to your model
         const totalUsers = users.length;
         const overdueCount = overduePayments.length;
 
@@ -113,7 +114,7 @@ const SuperAdminDashboard = () => {
         };
     }, [tickets, hotels, users, overduePayments]);
 
-    // ✅ Titre dynamique selon la vue
+    // Dynamic title based on view
     const getTitle = () => {
         switch (currentView) {
             case 'hotels': return 'Gestion des Hôtels';
@@ -142,7 +143,7 @@ const SuperAdminDashboard = () => {
         );
     }
 
-    // ✅ Fonction pour rendre le contenu selon la vue
+    // Function to render content based on view
     const renderContent = () => {
         switch (currentView) {
             case 'hotels':
@@ -199,8 +200,14 @@ const SuperAdminDashboard = () => {
     );
 };
 
-// ✅ Vue Dashboard (par défaut)
-const DashboardView = ({ stats, tickets, hotels, overduePayments }: any) => (
+// Dashboard view (default)
+interface DashboardViewProps {
+    stats: Record<string, number>;
+    tickets: TicketResponse[];
+    hotels: Hotel[];
+    overduePayments: Payment[];
+}
+const DashboardView = ({ stats, tickets, hotels, overduePayments }: DashboardViewProps) => (
     <>
         {/* Statistiques principales */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -280,7 +287,7 @@ const DashboardView = ({ stats, tickets, hotels, overduePayments }: any) => (
                     <p className="text-sm text-muted-foreground">Aucun hôtel enregistré</p>
                 ) : (
                     <div className="space-y-2">
-                        {hotels.slice(0, 5).map((hotel: Hotel) => (
+                        {hotels.slice(0, 5).map((hotel) => (
                             <div key={hotel.id} className="flex items-center justify-between p-2 border rounded">
                                 <div>
                                     <p className="font-medium">{hotel.name}</p>
@@ -362,7 +369,7 @@ const DashboardView = ({ stats, tickets, hotels, overduePayments }: any) => (
     </>
 );
 
-// ✅ Vue Hôtels
+// Hotels view
 const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
     hotels: Hotel[];
     searchFilter: string;
@@ -444,10 +451,11 @@ const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
             });
             setShowForm(false);
             onHotelCreated();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de créer l'hôtel",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -617,8 +625,8 @@ const HotelsView = ({ hotels, searchFilter, onHotelCreated }: {
     );
 };
 
-// ✅ Vue Utilisateurs
-const UsersView = ({ users, searchFilter }: { users: any[]; searchFilter: string }) => {
+// Users view
+const UsersView = ({ users, searchFilter }: { users: User[]; searchFilter: string }) => {
     const filteredUsers = users.filter(user =>
         user.email?.toLowerCase().includes(searchFilter.toLowerCase()) ||
         user.fullName?.toLowerCase().includes(searchFilter.toLowerCase())
@@ -653,7 +661,7 @@ const UsersView = ({ users, searchFilter }: { users: any[]; searchFilter: string
     );
 };
 
-// ✅ Vue Catégories
+// Categories view
 interface CategoriesViewProps {
     categories: Category[];
     searchFilter: string;
@@ -708,10 +716,11 @@ const CategoriesView = ({ categories, searchFilter, onRefresh }: CategoriesViewP
                 additionalCost: 0,
             });
             onRefresh();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de créer la catégorie",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -884,14 +893,14 @@ const CategoriesView = ({ categories, searchFilter, onRefresh }: CategoriesViewP
     );
 };
 
-// ✅ Vue Paiements
+// Payments view
 interface PaymentsViewProps {
-    overduePayments: any[];
-    allPayments: any[];
+    overduePayments: Payment[];
+    allPayments: Payment[];
 }
 
 const PaymentsView = ({ overduePayments, allPayments }: PaymentsViewProps) => {
-    // Filtrer les paiements reçus (non en retard)
+    // Filter received payments (not overdue)
     const receivedPayments = allPayments.filter(payment =>
         payment.status === 'PAID' &&
         !overduePayments.some(overdue => overdue.id === payment.id)
@@ -1036,7 +1045,7 @@ const PaymentsView = ({ overduePayments, allPayments }: PaymentsViewProps) => {
     );
 };
 
-// ✅ Vue Escalades
+// Escalations view
 const EscalationsView = ({ tickets }: { tickets: TicketResponse[] }) => (
     <Card>
         <CardHeader>
@@ -1067,9 +1076,34 @@ const EscalationsView = ({ tickets }: { tickets: TicketResponse[] }) => (
     </Card>
 );
 
-// ✅ Vue Rapports
-const ReportsView = ({ stats, tickets, hotels, users }: any) => {
-    const [globalReport, setGlobalReport] = useState<any>(null);
+// Reports view
+interface ReportsViewProps {
+    stats: Record<string, number>;
+    tickets: TicketResponse[];
+    hotels: Hotel[];
+    users: User[];
+}
+interface TechnicianReport {
+    technicianId: string;
+    technicianName: string;
+    totalTickets?: number;
+    resolvedTickets?: number;
+    [key: string]: string | number | undefined;
+}
+
+interface GlobalReport {
+    totalTickets?: number;
+    openTickets?: number;
+    resolvedTickets?: number;
+    urgentTickets?: number;
+    totalHotels?: number;
+    activeHotels?: number;
+    overduePayments?: number;
+    technicians?: TechnicianReport[];
+    [key: string]: string | number | undefined | TechnicianReport[] | unknown;
+}
+const ReportsView = ({ stats, tickets, hotels, users }: ReportsViewProps) => {
+    const [globalReport, setGlobalReport] = useState<GlobalReport | null>(null);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
 
@@ -1146,7 +1180,7 @@ const ReportsView = ({ stats, tickets, hotels, users }: any) => {
                                 <div>
                                     <p className="text-sm font-medium mb-2">Performances Techniciens</p>
                                     <div className="space-y-2">
-                                        {globalReport.technicians.slice(0, 5).map((tech: any) => (
+                                        {globalReport.technicians?.slice(0, 5).map((tech) => (
                                             <div key={tech.technicianId} className="p-3 border rounded-lg">
                                                 <p className="font-medium">{tech.technicianName}</p>
                                                 <p className="text-sm text-muted-foreground">
@@ -1167,9 +1201,9 @@ const ReportsView = ({ stats, tickets, hotels, users }: any) => {
     );
 };
 
-// ✅ Vue Logs
+// Logs view
 interface LogsViewProps {
-    logs: any[];
+    logs: AuditLog[];
     onRefresh: () => void;
 }
 
@@ -1396,7 +1430,7 @@ const LogsView = ({ logs, onRefresh }: LogsViewProps) => {
     );
 };
 
-// ✅ Vue Paramètres
+// Settings view
 const SettingsView = () => {
     const { user } = useAuth();
     const { toast } = useToast();
@@ -1537,7 +1571,7 @@ const SettingsView = () => {
     );
 };
 
-// ✅ Vue Plans
+// Plans view
 interface PlansViewProps {
     plans: Plan[];
     onRefresh: () => void;
@@ -1570,8 +1604,9 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
             try {
                 const stats = await apiService.getPlanStatistics();
                 setStatistics(stats);
-            } catch (error: any) {
+            } catch (error: unknown) {
                 // On error, don't block display
+                console.error("Error loading statistics:", error);
             }
         };
         loadStatistics();
@@ -1582,7 +1617,7 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
         try {
             const plansData = await apiService.getAllPlans();
             if (plansData && plansData.length > 0) {
-                // Mettre à jour les plans dans le parent via onRefresh
+                // Update plans in parent via onRefresh
                 onRefresh();
                 // Recharger les statistiques
                 const stats = await apiService.getPlanStatistics();
@@ -1592,10 +1627,11 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
                     description: "Liste des plans actualisée",
                 });
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Une erreur est survenue";
             toast({
                 title: "Erreur",
-                description: error.message || "Impossible de rafraîchir les plans",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -1700,14 +1736,6 @@ const PlansView = ({ plans, onRefresh }: PlansViewProps) => {
                                         <span className="font-medium">{plan.excessTicketCost.toFixed(2)}€</span>
                                     </div>
                                 </div>
-
-                                {/* Séparateur */}
-                                <div className="border-t pt-4">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <span>Plan ID:</span>
-                                        <span className="font-mono">{plan.id.substring(0, 8)}...</span>
-                                    </div>
-                                </div>
                             </CardContent>
                         </Card>
                     ))}
@@ -1761,7 +1789,7 @@ const StatCard = ({
 }: {
     title: string;
     value: number;
-    icon: any;
+    icon: React.ComponentType<{ className?: string }>;
     description?: string;
     variant?: "default" | "destructive";
 }) => (
