@@ -22,8 +22,15 @@ COPY tailwind.config.ts postcss.config.js ./
 # Copy ESLint config files (both formats may exist)
 COPY .eslintrc.json eslint.config.js components.json ./
 
-# Build the application
-RUN npm run build
+# Verify the build arg is set correctly before building
+RUN echo "Building with VITE_API_BASE_URL=$VITE_API_BASE_URL"
+
+# Build the application (ensure the env var is available during build)
+RUN VITE_API_BASE_URL=$VITE_API_BASE_URL npm run build
+
+# Verify the IP was compiled correctly
+RUN grep -r "13.63.15.86" dist/ || (echo "ERROR: New IP not found in build output!" && exit 1)
+RUN grep -r "13.49.44.219" dist/ && (echo "ERROR: Old IP still found in build output!" && exit 1) || echo "OK: Old IP not found"
 
 # Stage 2: Production with Nginx
 FROM nginx:alpine
