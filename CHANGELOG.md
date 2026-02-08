@@ -1,3 +1,11 @@
+## [1.0.7](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.6...v1.0.7) (2026-02-08)
+
+
+### Bug Fixes
+
+* improve old IP detection in deployment script to show exact location ([e7881e3](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/e7881e3b8c34e9e553ec937319b17d1be613ce0a))
+* remove duplicate labels definition in workflow ([f121e22](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/f121e22e8375fdcd389256ae561178b50a40bd76))
+
 ## [1.0.6](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.5...v1.0.6) (2026-02-08)
 
 
