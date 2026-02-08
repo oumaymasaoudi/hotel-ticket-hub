@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.3...v1.0.4) (2026-02-08)
+
+
+### Bug Fixes
+
+* verify IP during Docker build and ensure build-arg is used ([48131e7](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/48131e75e11943ef3eb4c977ea42ed71933e5623))
+
 ## [1.0.3](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.2...v1.0.3) (2026-02-08)
 
 
