@@ -278,15 +278,24 @@ jobs:
             # Log in to GitHub Container Registry (token passed via env var for security)
             echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull latest image (use branch name or latest)
+            # Pull latest image (use branch name or latest) - FORCE PULL
             export DOCKER_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
-            docker pull $DOCKER_IMAGE || docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+            echo "Pulling image: $DOCKER_IMAGE"
+            docker pull $DOCKER_IMAGE --no-cache || docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest --no-cache
             
-            # Stop and remove old container
+            # Stop and remove old container AND old image
             docker compose down || true
+            docker rmi $(docker images -q ghcr.io/${{ env.IMAGE_NAME }}:* 2>/dev/null) || true
             
             # Start new container with the correct image
-            DOCKER_IMAGE=$DOCKER_IMAGE docker compose up -d
+            echo "Starting container with image: $DOCKER_IMAGE"
+            DOCKER_IMAGE=$DOCKER_IMAGE docker compose up -d --force-recreate
+            
+            # Verify the IP in compiled files
+            echo "Verifying IP in compiled files..."
+            sleep 10
+            docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.63.15.86' /usr/share/nginx/html/ 2>/dev/null | head -3" || echo "WARNING: New IP not found in compiled files"
+            docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -3" && echo "ERROR: Old IP still found in compiled files!"
             
             # Wait for container to become healthy
             echo "Waiting for container to become healthy..."
