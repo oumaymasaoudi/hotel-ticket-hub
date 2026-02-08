@@ -25,12 +25,18 @@ COPY .eslintrc.json eslint.config.js components.json ./
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Verify the build arg is set correctly before building
+# Use printf to avoid GitHub Actions masking
 RUN echo "Building with VITE_API_BASE_URL=$VITE_API_BASE_URL" && \
     echo "Environment check:" && \
-    env | grep VITE_API_BASE_URL || echo "WARNING: VITE_API_BASE_URL not in env"
+    env | grep VITE_API_BASE_URL || echo "WARNING: VITE_API_BASE_URL not in env" && \
+    echo "Checking ARG value:" && \
+    echo "ARG VITE_API_BASE_URL=$VITE_API_BASE_URL" && \
+    echo "Checking ENV value:" && \
+    echo "ENV VITE_API_BASE_URL=$VITE_API_BASE_URL"
 
 # Build the application (Vite will use the ENV variable)
-RUN npm run build
+# Explicitly pass the env var to npm to ensure Vite sees it
+RUN VITE_API_BASE_URL=$VITE_API_BASE_URL npm run build
 
 # Verify the IP was compiled correctly
 RUN echo "Checking for new IP (13.63.15.86)..." && \
