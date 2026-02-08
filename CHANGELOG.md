@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.0...v1.0.1) (2026-02-08)
+
+
+### Performance Improvements
+
+* optimize Docker build with cache and add timeout ([93980e6](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/93980e64cf81a83e0e3588b0b78aeac87468b73b))
+
 # 1.0.0 (2026-02-07)
 
 
