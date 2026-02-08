@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Build argument for API URL (must be declared early, before any COPY that might use it)
 ARG VITE_API_BASE_URL=http://13.63.15.86:8081/api
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Copy package files
 COPY package*.json ./
@@ -22,15 +21,27 @@ COPY tailwind.config.ts postcss.config.js ./
 # Copy ESLint config files (both formats may exist)
 COPY .eslintrc.json eslint.config.js components.json ./
 
-# Verify the build arg is set correctly before building
-RUN echo "Building with VITE_API_BASE_URL=$VITE_API_BASE_URL"
+# Set ENV after copying files (Vite needs it at build time)
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# Build the application (ensure the env var is available during build)
-RUN VITE_API_BASE_URL=$VITE_API_BASE_URL npm run build
+# Verify the build arg is set correctly before building
+RUN echo "Building with VITE_API_BASE_URL=$VITE_API_BASE_URL" && \
+    echo "Environment check:" && \
+    env | grep VITE_API_BASE_URL || echo "WARNING: VITE_API_BASE_URL not in env"
+
+# Build the application (Vite will use the ENV variable)
+RUN npm run build
 
 # Verify the IP was compiled correctly
-RUN grep -r "13.63.15.86" dist/ || (echo "ERROR: New IP not found in build output!" && exit 1)
-RUN grep -r "13.49.44.219" dist/ && (echo "ERROR: Old IP still found in build output!" && exit 1) || echo "OK: Old IP not found"
+RUN echo "Checking for new IP (13.63.15.86)..." && \
+    (grep -r "13.63.15.86" dist/ && echo "✅ New IP found in build output!") || \
+    (echo "❌ ERROR: New IP not found in build output!" && \
+     echo "Checking what IP is actually in the files:" && \
+     grep -r "http://.*:8081/api" dist/ | head -3 && \
+     exit 1)
+RUN echo "Checking for old IP (13.49.44.219)..." && \
+    (grep -r "13.49.44.219" dist/ && echo "❌ ERROR: Old IP still found in build output!" && exit 1) || \
+    echo "✅ OK: Old IP not found"
 
 # Stage 2: Production with Nginx
 FROM nginx:alpine
