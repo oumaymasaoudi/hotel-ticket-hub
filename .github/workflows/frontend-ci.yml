@@ -238,6 +238,10 @@ jobs:
           no-cache: true
           build-args: |
             VITE_API_BASE_URL=http://13.63.15.86:8081/api
+          # Force rebuild by adding a timestamp label
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            build.timestamp=${{ github.run_number }}
 
   # ============================================
   # DEPLOY TO STAGING (for develop branch)
@@ -312,9 +316,14 @@ jobs:
               echo "❌ WARNING: New IP not found in compiled files"
             fi
             
-            if docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -1"; then
+            OLD_IP_FOUND=$(docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -5" || echo "")
+            if [ -n "$OLD_IP_FOUND" ]; then
               echo "❌ ERROR: Old IP (13.49.44.219) still found in compiled files!"
+              echo "Found in:"
+              echo "$OLD_IP_FOUND"
               echo "The image may not have been rebuilt correctly. Check the build logs."
+              echo "Attempting to show which files contain the old IP:"
+              docker exec hotel-ticket-hub-frontend-staging sh -c "grep -rl '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -10" || true
               exit 1
             else
               echo "✅ SUCCESS: Old IP not found - image is correct!"
