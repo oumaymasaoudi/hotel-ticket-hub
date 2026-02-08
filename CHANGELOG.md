@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.1...v1.0.2) (2026-02-08)
+
+
+### Bug Fixes
+
+* force complete rebuild and verify IP in deployment ([01e1499](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/01e149900ba3815de8c6544547c6c3d351d8150a))
+
 ## [1.0.1](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.0...v1.0.1) (2026-02-08)
 
 
