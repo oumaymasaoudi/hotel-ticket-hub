@@ -281,21 +281,44 @@ jobs:
             # Pull latest image (use branch name or latest) - FORCE PULL
             export DOCKER_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
             echo "Pulling image: $DOCKER_IMAGE"
-            docker pull $DOCKER_IMAGE --no-cache || docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest --no-cache
             
-            # Stop and remove old container AND old image
+            # Remove ALL old images first to force fresh pull
+            echo "Removing old images..."
+            docker images | grep "${{ env.IMAGE_NAME }}" | awk '{print $3}' | xargs -r docker rmi -f || true
+            
+            # Force pull without using cache
+            docker pull $DOCKER_IMAGE || docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
+            
+            # Stop and remove old container
+            echo "Stopping old container..."
             docker compose down || true
-            docker rmi $(docker images -q ghcr.io/${{ env.IMAGE_NAME }}:* 2>/dev/null) || true
+            
+            # Remove old container if it exists
+            docker rm -f hotel-ticket-hub-frontend-staging || true
             
             # Start new container with the correct image
             echo "Starting container with image: $DOCKER_IMAGE"
-            DOCKER_IMAGE=$DOCKER_IMAGE docker compose up -d --force-recreate
+            DOCKER_IMAGE=$DOCKER_IMAGE docker compose up -d --force-recreate --no-deps
+            
+            # Wait for container to be ready
+            echo "Waiting for container to be ready..."
+            sleep 15
             
             # Verify the IP in compiled files
             echo "Verifying IP in compiled files..."
-            sleep 10
-            docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.63.15.86' /usr/share/nginx/html/ 2>/dev/null | head -3" || echo "WARNING: New IP not found in compiled files"
-            docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -3" && echo "ERROR: Old IP still found in compiled files!"
+            if docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.63.15.86' /usr/share/nginx/html/ 2>/dev/null | head -1"; then
+              echo "✅ SUCCESS: New IP (13.63.15.86) found in compiled files!"
+            else
+              echo "❌ WARNING: New IP not found in compiled files"
+            fi
+            
+            if docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -1"; then
+              echo "❌ ERROR: Old IP (13.49.44.219) still found in compiled files!"
+              echo "The image may not have been rebuilt correctly. Check the build logs."
+              exit 1
+            else
+              echo "✅ SUCCESS: Old IP not found - image is correct!"
+            fi
             
             # Wait for container to become healthy
             echo "Waiting for container to become healthy..."
