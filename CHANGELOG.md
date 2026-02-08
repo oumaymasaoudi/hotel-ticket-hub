@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.4...v1.0.5) (2026-02-08)
+
+
+### Bug Fixes
+
+* ensure VITE_API_BASE_URL is available as ENV during Vite build ([9b57b6d](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/9b57b6d497244b30c1d32e27716570dd78431abb))
+
 ## [1.0.4](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.3...v1.0.4) (2026-02-08)
 
 
