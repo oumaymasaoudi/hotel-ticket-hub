@@ -1,3 +1,11 @@
+## [1.0.6](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.5...v1.0.6) (2026-02-08)
+
+
+### Bug Fixes
+
+* explicitly pass VITE_API_BASE_URL to npm build command ([55f0d3c](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/55f0d3c92294d9a4a2c170bf8c39e060f42a0af9))
+* use hardcoded VITE_API_BASE_URL instead of secret to ensure correct value ([508de14](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/508de1480641c1a0bc07adb1cde8f6c34ac86f9f))
+
 ## [1.0.5](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.4...v1.0.5) (2026-02-08)
 
 
