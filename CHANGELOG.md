@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.7...v1.0.8) (2026-02-08)
+
+
+### Bug Fixes
+
+* add error handling and logging to hotels/public endpoint to debug 400 error ([3b8167b](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/3b8167b91b9fa430c59e06fe23340356dc202937))
+
 ## [1.0.7](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.6...v1.0.7) (2026-02-08)
 
 
