@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportButton } from '../export/ExportButton';
 import { TicketResponse } from '@/services/apiService';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
 
 // Mock dependencies - must be before imports
 jest.mock('xlsx', () => ({
@@ -104,8 +106,6 @@ describe('ExportButton', () => {
   });
 
   it('should export to Excel when Excel option is clicked', async () => {
-    const XLSX = require('xlsx');
-    
     render(<ExportButton data={mockTickets} />);
     
     const button = screen.getByRole('button', { name: /exporter/i });
@@ -136,7 +136,6 @@ describe('ExportButton', () => {
     const pdfOption = screen.getByText(/PDF/i);
     fireEvent.click(pdfOption);
     
-    const jsPDF = require('jspdf');
     expect(jsPDF).toHaveBeenCalled();
   });
 
