@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 interface AutoCompleteOption {
   value: string
   label: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 interface AutoCompleteInputProps {

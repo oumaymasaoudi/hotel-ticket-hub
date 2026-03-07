@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 
 interface DraftSaverProps {
-  formData: Record<string, any>
+  formData: Record<string, unknown>
   storageKey: string
   saveInterval?: number // en millisecondes
-  onRestore?: (data: Record<string, any>) => void
+  onRestore?: (data: Record<string, unknown>) => void
 }
 
 export function DraftSaver({

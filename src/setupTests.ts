@@ -25,6 +25,13 @@ Object.defineProperty(globalThis, 'matchMedia', {
 // Mock scrollIntoView for jsdom (Radix UI Select needs it)
 Element.prototype.scrollIntoView = jest.fn();
 
+// Mock ResizeObserver for components that use it (e.g., cmdk, AutoCompleteInput)
+global.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
 // Suppress console errors and warnings for jsdom navigation and React Router
 // jsdom doesn't support navigation, so we suppress these expected errors
 // Apply filters immediately (not in beforeAll) to catch errors during module loading

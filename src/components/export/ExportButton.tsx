@@ -13,6 +13,17 @@ import * as XLSX from "xlsx"
 import jsPDF from "jspdf"
 import "jspdf-autotable"
 
+// Extend jsPDF type to include autoTable from jspdf-autotable
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: {
+    head: string[][]
+    body: string[][]
+    startY?: number
+    styles?: { fontSize?: number }
+    headStyles?: { fillColor?: number[] }
+  }) => jsPDF
+}
+
 interface ExportButtonProps {
   data: TicketResponse[]
   filename?: string
@@ -75,7 +86,7 @@ export function ExportButton({ data, filename = "tickets", className }: ExportBu
       ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString("fr-FR") : "-",
     ])
 
-    ;(doc as any).autoTable({
+    ;(doc as jsPDFWithAutoTable).autoTable({
       head: [["Numero", "Description", "Statut", "Categorie", "Technicien", "Date"]],
       body: tableData,
       startY: 30,

@@ -39,7 +39,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint
@@ -67,7 +67,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run tests with coverage
         run: npm test -- --coverage --watchAll=false
@@ -119,7 +119,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit
+        run: npm install --legacy-peer-deps --no-audit
 
       - name: Build application
         run: npm run build
@@ -167,7 +167,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run tests with coverage
         run: npm test -- --coverage --watchAll=false
@@ -196,7 +196,8 @@ jobs:
     name: Frontend - Docker Build & Push
     runs-on: ubuntu-latest
     needs: [build]
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -236,7 +237,7 @@ jobs:
           # cache-to: type=gha,mode=max
           no-cache: true
           build-args: |
-            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || 'http://13.63.15.86:8081/api' }}
+            VITE_API_BASE_URL=http://13.63.15.86:8081/api
 
   # ============================================
   # DEPLOY TO STAGING (for develop branch)
@@ -245,7 +246,7 @@ jobs:
     name: Frontend - Deploy to Staging
     runs-on: ubuntu-latest
     needs: [docker-build]
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main') && github.event_name == 'push'
     environment: staging
     steps:
       - name: Checkout code
@@ -277,15 +278,52 @@ jobs:
             # Log in to GitHub Container Registry (token passed via env var for security)
             echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Pull latest image
-            export DOCKER_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}:develop
+            # Pull latest image (use branch name or latest) - FORCE PULL
+            export DOCKER_IMAGE=ghcr.io/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            echo "Pulling image: $DOCKER_IMAGE"
+            
+            # Remove ALL old images first to force fresh pull
+            echo "Removing old images..."
+            docker images | grep "${{ env.IMAGE_NAME }}" | awk '{print $3}' | xargs -r docker rmi -f || true
+            
+            # Force pull without using cache
             docker pull $DOCKER_IMAGE || docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest
             
             # Stop and remove old container
+            echo "Stopping old container..."
             docker compose down || true
             
-            # Start new container
-            docker compose up -d
+            # Remove old container if it exists
+            docker rm -f hotel-ticket-hub-frontend-staging || true
+            
+            # Start new container with the correct image
+            echo "Starting container with image: $DOCKER_IMAGE"
+            DOCKER_IMAGE=$DOCKER_IMAGE docker compose up -d --force-recreate --no-deps
+            
+            # Wait for container to be ready
+            echo "Waiting for container to be ready..."
+            sleep 15
+            
+            # Verify the IP in compiled files
+            echo "Verifying IP in compiled files..."
+            if docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.63.15.86' /usr/share/nginx/html/ 2>/dev/null | head -1"; then
+              echo "✅ SUCCESS: New IP (13.63.15.86) found in compiled files!"
+            else
+              echo "❌ WARNING: New IP not found in compiled files"
+            fi
+            
+            OLD_IP_FOUND=$(docker exec hotel-ticket-hub-frontend-staging sh -c "grep -r '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -5" || echo "")
+            if [ -n "$OLD_IP_FOUND" ]; then
+              echo "❌ ERROR: Old IP (13.49.44.219) still found in compiled files!"
+              echo "Found in:"
+              echo "$OLD_IP_FOUND"
+              echo "The image may not have been rebuilt correctly. Check the build logs."
+              echo "Attempting to show which files contain the old IP:"
+              docker exec hotel-ticket-hub-frontend-staging sh -c "grep -rl '13.49.44.219' /usr/share/nginx/html/ 2>/dev/null | head -10" || true
+              exit 1
+            else
+              echo "✅ SUCCESS: Old IP not found - image is correct!"
+            fi
             
             # Wait for container to become healthy
             echo "Waiting for container to become healthy..."
@@ -336,7 +374,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run semantic-release
         env:
