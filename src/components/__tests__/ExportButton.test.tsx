@@ -59,17 +59,12 @@ const mockTickets: TicketResponse[] = [
 describe('ExportButton', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Create a real DOM element instead of a mock object
-    // This prevents appendChild errors from jsPDF
-    const originalCreateElement = document.createElement.bind(document);
-    jest.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
-      if (tagName === 'a') {
-        const link = originalCreateElement('a');
-        link.click = jest.fn();
-        return link;
-      }
-      return originalCreateElement(tagName);
-    });
+    // Don't mock createElement - let it work normally
+    // jsPDF will work with real DOM elements
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should render export button', () => {
