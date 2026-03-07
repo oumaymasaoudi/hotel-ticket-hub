@@ -1,3 +1,20 @@
+## [1.0.9](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.8...v1.0.9) (2026-03-07)
+
+
+### Bug Fixes
+
+* add --legacy-peer-deps flag to npm install commands for jspdf-autotable compatibility ([cda4c9f](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/cda4c9f39fa9261157403019ed6dadcddad76cd0))
+* add @testing-library/dom as explicit dependency ([8b799c0](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/8b799c0760205f97d1ba584907716546f138905f))
+* add React import in Breadcrumbs and jspdf-autotable dependency ([f0a7af1](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/f0a7af11224f1912e19d0cc8a64211a04deb2240))
+* add ResizeObserver mock, improve jsPDF mocks, and increase Jest memory limit ([8f8cb1a](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/8f8cb1a1406c9168c583f70b504b18f8bdfce8fd))
+* add spy for document.createElement in ExportButton tests ([200e82b](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/200e82b8a58381942b90dba282f6b5c4cd967361))
+* correct lint errors in utils.test.ts ([68d56b7](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/68d56b7dc1ffdd6799051cc0d10dc3332a9c1d5e))
+* correct test assertions to match actual component behavior - wait for dropdown menus and fix value checks ([af33b95](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/af33b9564e8c1180df44781c598dd96cca7a1b89))
+* correct test mocks and adapt tests to actual component behavior ([7c09110](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/7c09110e65ce73877c26eef70c01a6ee90b9ab04))
+* disable exhaustive-deps warning for loadTickets in useEffect ([5b4f091](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/5b4f0919b7a71e982569d1e3eef40026a6b84572))
+* replace require() with ES6 imports and fix any types to unknown ([386522b](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/386522b456feb7456ac21ca677db55266f08090c))
+* use userEvent for dropdown interactions and fix test assertions ([cb199df](https://github.com/oumaymasaoudi/hotel-ticket-hub/commit/cb199dfec7d6e02ad562455bb7395777843e77ed))
+
 ## [1.0.8](https://github.com/oumaymasaoudi/hotel-ticket-hub/compare/v1.0.7...v1.0.8) (2026-02-08)
 
 
