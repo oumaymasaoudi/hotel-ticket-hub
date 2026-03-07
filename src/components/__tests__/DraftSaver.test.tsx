@@ -98,7 +98,8 @@ describe('DraftSaver', () => {
     // Clear localStorage first
     localStorage.removeItem('test-key');
     
-    render(
+    // First render - component saves immediately because lastSaveRef.current is 0
+    const { rerender } = render(
       <DraftSaver
         formData={mockFormData}
         storageKey="test-key"
@@ -106,19 +107,40 @@ describe('DraftSaver', () => {
       />
     );
 
-    // The component saves immediately on first render if timeSinceLastSave >= saveInterval
-    // Since lastSaveRef.current starts at 0, the first save happens immediately
-    // So we need to wait for the initial save, then test the interval
+    // Wait for initial save
     await waitFor(() => {
       const saved = localStorage.getItem('test-key');
       expect(saved).toBeTruthy();
     });
 
-    // Clear and update formData to test the interval
+    // Clear localStorage and update formData
+    // The component will save immediately again because timeSinceLastSave >= saveInterval
     localStorage.removeItem('test-key');
-    const { rerender } = render(
+    rerender(
       <DraftSaver
         formData={{ ...mockFormData, title: 'Updated Title' }}
+        storageKey="test-key"
+        saveInterval={2000}
+      />
+    );
+
+    // Wait for immediate save after rerender
+    await waitFor(() => {
+      const saved = localStorage.getItem('test-key');
+      expect(saved).toBeTruthy();
+    });
+
+    // Now clear and update again - this time the save should happen after the interval
+    localStorage.removeItem('test-key');
+    
+    // Advance time to simulate that lastSaveRef.current is now set
+    // We need to wait for the component to process the update
+    jest.advanceTimersByTime(100);
+    
+    // Update formData again - this time it should schedule a save after the interval
+    rerender(
+      <DraftSaver
+        formData={{ ...mockFormData, title: 'Updated Title 2' }}
         storageKey="test-key"
         saveInterval={2000}
       />
@@ -136,7 +158,7 @@ describe('DraftSaver', () => {
       expect(saved).toBeTruthy();
       if (saved) {
         const parsed = JSON.parse(saved);
-        expect(parsed.title).toBe('Updated Title');
+        expect(parsed.title).toBe('Updated Title 2');
       }
     });
   });

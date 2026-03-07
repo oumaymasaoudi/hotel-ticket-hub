@@ -42,9 +42,10 @@ describe('AutoCompleteInput', () => {
       />
     );
 
-    // The value is shown in the combobox button
-    const combobox = screen.getByRole('combobox');
-    expect(combobox).toHaveAttribute('value', 'Option 1');
+    // The value is shown in the combobox button text content
+    const combobox = screen.getByRole('combobox', { name: /option 1/i });
+    expect(combobox).toBeInTheDocument();
+    expect(combobox).toHaveTextContent('Option 1');
   });
 
   it('should call onChange when input value changes', async () => {
@@ -56,13 +57,14 @@ describe('AutoCompleteInput', () => {
       />
     );
 
-    // Open the combobox
-    const combobox = screen.getByRole('combobox');
-    fireEvent.click(combobox);
+    // Open the combobox - get the button (first combobox)
+    const comboboxButtons = screen.getAllByRole('combobox');
+    const button = comboboxButtons[0]; // The button trigger
+    fireEvent.click(button);
     
-    // Find the input inside the popover
+    // Wait for the popover to open and find the input inside
     await waitFor(() => {
-      const input = screen.getByRole('combobox', { expanded: true });
+      const input = screen.getByPlaceholderText(/rechercher/i);
       expect(input).toBeInTheDocument();
     });
     
@@ -70,8 +72,10 @@ describe('AutoCompleteInput', () => {
     const input = screen.getByPlaceholderText(/rechercher/i);
     fireEvent.change(input, { target: { value: 'test' } });
 
-    // Note: onChange might not be called immediately due to debouncing
-    // This test may need adjustment based on actual component behavior
+    // onChange should be called when the input value changes
+    await waitFor(() => {
+      expect(mockOnChange).toHaveBeenCalledWith('test');
+    });
   });
 
   it('should filter options based on input', async () => {

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportButton } from '../export/ExportButton';
 import { TicketResponse } from '@/services/apiService';
 
@@ -74,21 +74,28 @@ describe('ExportButton', () => {
     expect(button).toBeInTheDocument();
   });
 
-  it('should open dropdown menu on click', () => {
+  it('should open dropdown menu on click', async () => {
     render(<ExportButton data={mockTickets} />);
     
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /exporter/i });
     fireEvent.click(button);
     
-    // Check if menu items are visible
-    expect(screen.getByText(/CSV/i)).toBeInTheDocument();
+    // Wait for the dropdown menu to open
+    await waitFor(() => {
+      expect(screen.getByText(/CSV/i)).toBeInTheDocument();
+    });
   });
 
-  it('should export to CSV when CSV option is clicked', () => {
+  it('should export to CSV when CSV option is clicked', async () => {
     render(<ExportButton data={mockTickets} />);
     
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /exporter/i });
     fireEvent.click(button);
+    
+    // Wait for menu to open
+    await waitFor(() => {
+      expect(screen.getByText(/CSV/i)).toBeInTheDocument();
+    });
     
     const csvOption = screen.getByText(/CSV/i);
     fireEvent.click(csvOption);
@@ -96,13 +103,18 @@ describe('ExportButton', () => {
     expect(document.createElement).toHaveBeenCalledWith('a');
   });
 
-  it('should export to Excel when Excel option is clicked', () => {
+  it('should export to Excel when Excel option is clicked', async () => {
     const XLSX = require('xlsx');
     
     render(<ExportButton data={mockTickets} />);
     
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /exporter/i });
     fireEvent.click(button);
+    
+    // Wait for menu to open
+    await waitFor(() => {
+      expect(screen.getByText(/Excel/i)).toBeInTheDocument();
+    });
     
     const excelOption = screen.getByText(/Excel/i);
     fireEvent.click(excelOption);
@@ -110,11 +122,16 @@ describe('ExportButton', () => {
     expect(XLSX.utils.json_to_sheet).toHaveBeenCalled();
   });
 
-  it('should export to PDF when PDF option is clicked', () => {
+  it('should export to PDF when PDF option is clicked', async () => {
     render(<ExportButton data={mockTickets} />);
     
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /exporter/i });
     fireEvent.click(button);
+    
+    // Wait for menu to open
+    await waitFor(() => {
+      expect(screen.getByText(/PDF/i)).toBeInTheDocument();
+    });
     
     const pdfOption = screen.getByText(/PDF/i);
     fireEvent.click(pdfOption);
@@ -123,11 +140,16 @@ describe('ExportButton', () => {
     expect(jsPDF).toHaveBeenCalled();
   });
 
-  it('should use custom filename when provided', () => {
+  it('should use custom filename when provided', async () => {
     render(<ExportButton data={mockTickets} filename="custom-export" />);
     
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /exporter/i });
     fireEvent.click(button);
+    
+    // Wait for menu to open
+    await waitFor(() => {
+      expect(screen.getByText(/CSV/i)).toBeInTheDocument();
+    });
     
     const csvOption = screen.getByText(/CSV/i);
     fireEvent.click(csvOption);
