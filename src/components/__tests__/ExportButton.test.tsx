@@ -60,10 +60,12 @@ const mockTickets: TicketResponse[] = [
 ];
 
 describe('ExportButton', () => {
+  let createElementSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    // Don't mock createElement - let it work normally
-    // jsPDF will work with real DOM elements
+    // Spy on document.createElement to verify it's called
+    createElementSpy = jest.spyOn(document, 'createElement');
   });
 
   afterEach(() => {
@@ -105,7 +107,7 @@ describe('ExportButton', () => {
     const csvOption = screen.getByText(/CSV/i);
     await user.click(csvOption);
     
-    expect(document.createElement).toHaveBeenCalledWith('a');
+    expect(createElementSpy).toHaveBeenCalledWith('a');
   });
 
   it('should export to Excel when Excel option is clicked', async () => {
@@ -160,7 +162,7 @@ describe('ExportButton', () => {
     await user.click(csvOption);
     
     // The filename should be used in the download
-    expect(document.createElement).toHaveBeenCalledWith('a');
+    expect(createElementSpy).toHaveBeenCalledWith('a');
   });
 
   it('should handle empty data array', () => {
