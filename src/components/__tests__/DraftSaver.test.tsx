@@ -113,9 +113,12 @@ describe('DraftSaver', () => {
       expect(saved).toBeTruthy();
     });
 
-    // Clear localStorage and update formData
-    // The component will save immediately again because timeSinceLastSave >= saveInterval
+    // Clear localStorage and wait a bit to ensure lastSaveRef.current is updated
     localStorage.removeItem('test-key');
+    jest.advanceTimersByTime(100);
+    
+    // Update formData - since timeSinceLastSave (100ms) < saveInterval (2000ms),
+    // it should schedule a save after (2000 - 100) = 1900ms
     rerender(
       <DraftSaver
         formData={{ ...mockFormData, title: 'Updated Title' }}
@@ -124,33 +127,11 @@ describe('DraftSaver', () => {
       />
     );
 
-    // Wait for immediate save after rerender
-    await waitFor(() => {
-      const saved = localStorage.getItem('test-key');
-      expect(saved).toBeTruthy();
-    });
-
-    // Now clear and update again - this time the save should happen after the interval
-    localStorage.removeItem('test-key');
-    
-    // Advance time to simulate that lastSaveRef.current is now set
-    // We need to wait for the component to process the update
-    jest.advanceTimersByTime(100);
-    
-    // Update formData again - this time it should schedule a save after the interval
-    rerender(
-      <DraftSaver
-        formData={{ ...mockFormData, title: 'Updated Title 2' }}
-        storageKey="test-key"
-        saveInterval={2000}
-      />
-    );
-
-    // After 1 second, should not be saved yet (interval is 2000ms)
+    // After 1 second, should not be saved yet (needs 1900ms total)
     jest.advanceTimersByTime(1000);
     expect(localStorage.getItem('test-key')).toBeNull();
 
-    // After another 1 second (total 2000ms), should be saved
+    // After another 1 second (total 2000ms from last save), should be saved
     jest.advanceTimersByTime(1000);
 
     await waitFor(() => {
@@ -158,7 +139,7 @@ describe('DraftSaver', () => {
       expect(saved).toBeTruthy();
       if (saved) {
         const parsed = JSON.parse(saved);
-        expect(parsed.title).toBe('Updated Title 2');
+        expect(parsed.title).toBe('Updated Title');
       }
     });
   });

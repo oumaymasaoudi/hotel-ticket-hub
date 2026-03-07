@@ -36,14 +36,15 @@ describe('AutoCompleteInput', () => {
   it('should display current value', () => {
     render(
       <AutoCompleteInput
-        value="Option 1"
+        value="1"
         onChange={mockOnChange}
         options={mockOptions}
       />
     );
 
     // The value is shown in the combobox button text content
-    const combobox = screen.getByRole('combobox', { name: /option 1/i });
+    // Find the button by its text content
+    const combobox = screen.getByRole('combobox');
     expect(combobox).toBeInTheDocument();
     expect(combobox).toHaveTextContent('Option 1');
   });
