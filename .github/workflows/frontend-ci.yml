@@ -39,7 +39,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint
@@ -67,7 +67,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run tests with coverage
         run: npm test -- --coverage --watchAll=false
@@ -119,7 +119,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit
+        run: npm install --legacy-peer-deps --no-audit
 
       - name: Build application
         run: npm run build
@@ -167,7 +167,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run tests with coverage
         run: npm test -- --coverage --watchAll=false
@@ -374,7 +374,7 @@ jobs:
           # cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Run semantic-release
         env:

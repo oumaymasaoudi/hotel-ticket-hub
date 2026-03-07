@@ -9,7 +9,7 @@ ARG VITE_API_BASE_URL=http://13.63.15.86:8081/api
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code (explicitly exclude sensitive files via .dockerignore)
 # .dockerignore already excludes: .env, .git, node_modules, etc.
