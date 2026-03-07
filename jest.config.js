@@ -52,5 +52,8 @@ export default {
       tsconfig: 'tsconfig.test.json',
     }],
   },
+  // Increase memory limit for Jest workers to prevent crashes
+  maxWorkers: '50%',
+  workerIdleMemoryLimit: '500MB',
 };
 

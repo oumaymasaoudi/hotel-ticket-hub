@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ExportButton } from '../export/ExportButton';
 import { TicketResponse } from '@/services/apiService';
 
-// Mock dependencies
+// Mock dependencies - must be before imports
 jest.mock('xlsx', () => ({
   utils: {
     json_to_sheet: jest.fn(),
@@ -12,13 +12,20 @@ jest.mock('xlsx', () => ({
   writeFile: jest.fn(),
 }));
 
+// Mock jspdf-autotable FIRST to prevent DOM manipulation during import
+jest.mock('jspdf-autotable', () => ({}), { virtual: true });
+
 jest.mock('jspdf', () => {
   const mockDoc = {
-    setFontSize: jest.fn(),
-    setFont: jest.fn(),
-    text: jest.fn(),
-    autoTable: jest.fn(),
-    save: jest.fn(),
+    setFontSize: jest.fn().mockReturnThis(),
+    setFont: jest.fn().mockReturnThis(),
+    text: jest.fn().mockReturnThis(),
+    autoTable: jest.fn().mockReturnThis(),
+    save: jest.fn().mockReturnThis(),
+    output: jest.fn(() => 'mock-pdf-data'),
+    internal: {
+      events: [],
+    },
   };
   return jest.fn(() => mockDoc);
 });
@@ -52,12 +59,17 @@ const mockTickets: TicketResponse[] = [
 describe('ExportButton', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const mockLink = {
-      href: '',
-      download: '',
-      click: jest.fn(),
-    };
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+    // Create a real DOM element instead of a mock object
+    // This prevents appendChild errors from jsPDF
+    const originalCreateElement = document.createElement.bind(document);
+    jest.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        const link = originalCreateElement('a');
+        link.click = jest.fn();
+        return link;
+      }
+      return originalCreateElement(tagName);
+    });
   });
 
   it('should render export button', () => {
