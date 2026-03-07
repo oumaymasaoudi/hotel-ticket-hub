@@ -45,6 +45,7 @@ export function CommandPalette() {
     if (open && user?.userId) {
       loadTickets()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?.userId])
 
   const loadTickets = async () => {
